@@ -1,425 +1,408 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import GraphCanvas from "./GraphCanvas.jsx";
 import NodeDetailCard from "./NodeDetailCard.jsx";
 
 const CATEGORY_OPTIONS = [
   { id: "people", label: "People" },
-  { id: "community", label: "Community" },
-  { id: "worship", label: "Worship" },
-  { id: "your-culture", label: "Your Culture" },
-  { id: "other-culture", label: "Other Culture" },
-  { id: "resources", label: "Resources" },
-  { id: "places", label: "Places to Visit" },
-  { id: "groceries", label: "Groceries" },
+  { id: "events", label: "Events" },
+  { id: "food", label: "Food" },
   { id: "housing", label: "Housing" },
-  { id: "transit", label: "Transit" },
+  { id: "tasks", label: "Tasks" },
 ];
 
-function textValue(value) {
-  if (!value) return "";
-  if (Array.isArray(value)) return value.join(" ");
-  return String(value);
-}
-
 function mapsHref(item) {
-  const direct = (item.maps_link || "").trim();
+  const direct = (item?.maps_link || "").trim();
   if (direct) return direct;
-  const query = (item.maps_query || item.address || item.location || item.name || "").trim();
+  const query = (item?.maps_query || item?.address || item?.location || item?.name || "").trim();
   if (!query) return "";
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
-function toKeywords(match) {
-  const profile = match?.evidence_bundle?.student_profile || {};
-  const raw = [
-    profile.country_of_origin,
-    profile.home_city,
-    profile.cultural_background,
-    profile.religion_or_observance,
-    profile.diet,
-    textValue(profile.needs),
-    textValue(profile.interests),
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return raw
-    .split(/[^a-z0-9]+/)
-    .filter((token) => token.length > 3)
-    .slice(0, 16);
+function toPct(value) {
+  if (value == null || Number.isNaN(Number(value))) return null;
+  return `${Math.round(Number(value) * 100)}%`;
 }
 
-function isYourCulture(item, keywords) {
-  if (!keywords.length) return false;
-  const haystack = [item.name, item.category, item.notes, item.why_recommended, item.location]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return keywords.some((keyword) => haystack.includes(keyword));
+function initials(name) {
+  const words = String(name || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (!words.length) return "?";
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return `${words[0][0]}${words[1][0]}`.toUpperCase();
 }
 
-function emailHref(email, name) {
-  if (!email) return "";
-  const subject = encodeURIComponent(`Globaldost intro | ${name || "New connection"}`);
-  return `mailto:${encodeURIComponent(email)}?subject=${subject}`;
+function avatarTone(seed) {
+  const value = Array.from(seed || "x").reduce((sum, char) => sum + char.charCodeAt(0), 0);
+  const tones = ["teal", "sky", "mint", "blue", "aqua"];
+  return tones[value % tones.length];
 }
 
-function socialHref(value, platform) {
-  const raw = (value || "").trim();
-  if (!raw) return "";
-  if (/^https?:\/\//i.test(raw)) return raw;
-  if (platform === "instagram") {
-    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
-    return `https://www.instagram.com/${encodeURIComponent(handle)}`;
-  }
-  return raw;
+function first(items, count) {
+  return (Array.isArray(items) ? items : []).slice(0, count);
 }
 
-function mentorToCard(mentor) {
-  return {
+function buildCategoryData(match, plan) {
+  const mentors = first(match?.mentors_top3, 6).map((mentor) => ({
+    cardId: `mentor-${mentor.id}`,
     id: mentor.id,
-    badge: "Mentor",
     title: mentor.name,
-    meta: (mentor.match_reasons || []).join(" | ") || "Graph-ranked mentor match",
-    body: mentor.why_this_match || mentor.connect_hint || "Strong match for your profile.",
-    actionLabel: mentor.email ? "Email" : mentor.linkedin_url ? "LinkedIn" : "View profile",
-    actionHref: mentor.email ? emailHref(mentor.email, mentor.name) : mentor.linkedin_url || "",
-    profile: {
-      role: "Mentor",
-      name: mentor.name,
-      email: mentor.email || "",
-      linkedin_url: mentor.linkedin_url || "",
-      instagram_url: mentor.instagram_url || "",
-      confidence_score: mentor.confidence_score ?? mentor.match_score ?? null,
-      trust_score: mentor.trust_score ?? null,
-      languages: mentor.languages || [],
-      match_reasons: mentor.match_reasons || [],
-      connect_hint: mentor.connect_hint || "",
-      why_this_match: mentor.why_this_match || "",
-    },
-  };
-}
+    kind: "Mentor",
+    nodeId: mentor.id,
+    subtitle: mentor.match_reasons?.join(" | ") || "Mentor from your graph",
+    description: mentor.connect_hint || "Great first contact for practical local advice.",
+    why: mentor.why_this_match || "Shared background and need overlap made this a strong match.",
+    avatar: initials(mentor.name),
+    avatarTone: avatarTone(mentor.id),
+    trustSignals: [
+      toPct(mentor.confidence_score ?? mentor.match_score) ? `Match ${toPct(mentor.confidence_score ?? mentor.match_score)}` : null,
+      mentor.trust_score != null ? `Trust ${Number(mentor.trust_score).toFixed(2)}` : null,
+    ].filter(Boolean),
+    detailLines: [
+      mentor.why_this_match ? `Cultural fit: ${mentor.why_this_match}` : null,
+      mentor.connect_hint ? `How to reach out: ${mentor.connect_hint}` : null,
+    ].filter(Boolean),
+    cta: mentor.email ? { label: "Email", href: `mailto:${encodeURIComponent(mentor.email)}` } : null,
+  }));
 
-function peerToCard(peer) {
-  return {
+  const peers = first(match?.peers_nearby, 6).map((peer) => ({
+    cardId: `peer-${peer.id}`,
     id: peer.id,
-    badge: "Peer",
     title: peer.name,
-    meta: [peer.neighborhood, peer.university].filter(Boolean).join(" | ") || "Peer nearby",
-    body: peer.connect_hint || "Reach out for local guidance.",
-    actionLabel: peer.email ? "Email" : "Open",
-    actionHref: peer.email ? emailHref(peer.email, peer.name) : "",
-    profile: {
-      role: "Peer",
-      name: peer.name,
-      email: peer.email || "",
-      linkedin_url: peer.linkedin_url || "",
-      instagram_url: peer.instagram_url || "",
-      university: peer.university || "",
-      neighborhood: peer.neighborhood || "",
-      connect_hint: peer.connect_hint || "",
-    },
-  };
-}
+    kind: "Peer",
+    nodeId: peer.id,
+    subtitle: [peer.university, peer.neighborhood].filter(Boolean).join(" | ") || "Peer nearby",
+    description: peer.connect_hint || "A student connection for social and campus navigation.",
+    why: "Shared destination context can reduce first-week overwhelm.",
+    avatar: initials(peer.name),
+    avatarTone: avatarTone(peer.id),
+    trustSignals: [peer.neighborhood ? `Nearby: ${peer.neighborhood}` : null].filter(Boolean),
+    detailLines: [
+      peer.connect_hint ? `How to connect: ${peer.connect_hint}` : null,
+      peer.university ? `University context: ${peer.university}` : null,
+    ].filter(Boolean),
+    cta: peer.email ? { label: "Email", href: `mailto:${encodeURIComponent(peer.email)}` } : null,
+  }));
 
-function PersonProfileModal({ item, onClose }) {
-  useEffect(() => {
-    if (!item) return undefined;
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [item, onClose]);
+  const events = first(match?.community_events, 8).map((event) => ({
+    cardId: `event-${event.id}`,
+    id: event.id,
+    title: event.name,
+    kind: "Event",
+    nodeId: event.id,
+    subtitle: [event.category, event.start_time].filter(Boolean).join(" | "),
+    description: event.notes || "Community touchpoint to build belonging in your first month.",
+    why: "Joining one event early can unlock your support network faster.",
+    avatar: "EV",
+    avatarTone: "blue",
+    trustSignals: [event.location ? `Location: ${event.location}` : null].filter(Boolean),
+    detailLines: [event.notes || null].filter(Boolean),
+    cta: mapsHref(event) ? { label: "Open maps", href: mapsHref(event) } : null,
+  }));
 
-  if (!item?.profile) return null;
+  const food = [
+    ...first(match?.grocery_stores, 4).map((item) => ({
+      cardId: `grocery-${item.id}`,
+      id: item.id,
+      title: item.name,
+      kind: "Grocery",
+      nodeId: item.id,
+      subtitle: [item.neighborhood, item.address].filter(Boolean).join(" | "),
+      description: item.why_recommended || "Reliable essentials near your destination.",
+      why: "Food familiarity can reduce transition stress quickly.",
+      avatar: "FO",
+      avatarTone: "mint",
+      trustSignals: [item.subtype || null].filter(Boolean),
+      detailLines: [item.why_recommended || null].filter(Boolean),
+      cta: mapsHref(item) ? { label: "Open maps", href: mapsHref(item) } : null,
+    })),
+    ...first(match?.cultural_restaurants, 4).map((item) => ({
+      cardId: `restaurant-${item.id}`,
+      id: item.id,
+      title: item.name,
+      kind: "Food",
+      nodeId: item.id,
+      subtitle: item.distance_km != null ? `${item.distance_km} km` : "Restaurant",
+      description: "Comfort food option connected to your profile context.",
+      why: "Small comfort routines make difficult weeks easier.",
+      avatar: "FD",
+      avatarTone: "teal",
+      trustSignals: [item.price_level != null ? `Price level ${item.price_level}` : null].filter(Boolean),
+      detailLines: ["Comfort-food node from your graph evidence."],
+      cta: null,
+    })),
+  ];
 
-  const p = item.profile;
-  const linkedinHref = socialHref(p.linkedin_url, "linkedin");
-  const instagramHref = socialHref(p.instagram_url, "instagram");
+  const housing = [
+    ...first(match?.housing_areas, 8).map((item) => ({
+      cardId: `housing-${item.id}`,
+      id: item.id,
+      title: item.name,
+      kind: "Housing",
+      nodeId: item.id,
+      subtitle: [item.neighborhood, item.address].filter(Boolean).join(" | "),
+      description: item.why_recommended || "Area connected to your goals and commute needs.",
+      why: "Choosing a stable base early improves everything else in your plan.",
+      avatar: "HS",
+      avatarTone: "sky",
+      trustSignals: [item.subtype || null].filter(Boolean),
+      detailLines: [item.why_recommended || null].filter(Boolean),
+      cta: mapsHref(item) ? { label: "Open maps", href: mapsHref(item) } : null,
+    })),
+    ...first(match?.resources, 4).map((resource) => ({
+      cardId: `resource-${resource.id}`,
+      id: resource.id,
+      title: resource.name,
+      kind: "Resource",
+      nodeId: resource.id,
+      subtitle: resource.resource_type || "Support resource",
+      description: "Helpful service for housing, onboarding, or administrative support.",
+      why: "Support offices can solve issues before they become urgent.",
+      avatar: "RS",
+      avatarTone: "aqua",
+      trustSignals: [],
+      detailLines: ["Helpful for admin, legal, onboarding, and student support."],
+      cta: null,
+    })),
+  ];
 
-  return (
-    <div className="gb-profile-modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <aside
-        className="gb-profile-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="person-profile-title"
-        onMouseDown={(event) => event.stopPropagation()}
-      >
-        <div className="gb-profile-modal__head">
-          <div>
-            <p className="gb-profile-modal__eyebrow">{p.role} profile</p>
-            <h3 id="person-profile-title">{p.name}</h3>
-          </div>
-          <button type="button" className="gb-banner__close" onClick={onClose} aria-label="Close profile">
-            ×
-          </button>
-        </div>
-
-        {(p.why_this_match || p.connect_hint) && (
-          <p className="gb-profile-modal__summary">{p.why_this_match || p.connect_hint}</p>
-        )}
-
-        <div className="gb-profile-modal__grid">
-          {p.email && (
-            <div className="gb-profile-modal__item">
-              <span>Email</span>
-              <a href={`mailto:${encodeURIComponent(p.email)}`}>{p.email}</a>
-            </div>
-          )}
-          {p.university && (
-            <div className="gb-profile-modal__item">
-              <span>University</span>
-              <strong>{p.university}</strong>
-            </div>
-          )}
-          {p.neighborhood && (
-            <div className="gb-profile-modal__item">
-              <span>Neighborhood</span>
-              <strong>{p.neighborhood}</strong>
-            </div>
-          )}
-          {p.confidence_score != null && (
-            <div className="gb-profile-modal__item">
-              <span>Confidence</span>
-              <strong>{Math.round(Number(p.confidence_score) * 100)}%</strong>
-            </div>
-          )}
-          {p.trust_score != null && (
-            <div className="gb-profile-modal__item">
-              <span>Trust score</span>
-              <strong>{Number(p.trust_score).toFixed(2)}</strong>
-            </div>
-          )}
-          {Array.isArray(p.languages) && p.languages.length > 0 && (
-            <div className="gb-profile-modal__item gb-profile-modal__item--full">
-              <span>Languages</span>
-              <strong>{p.languages.join(" | ")}</strong>
-            </div>
-          )}
-          {Array.isArray(p.match_reasons) && p.match_reasons.length > 0 && (
-            <div className="gb-profile-modal__item gb-profile-modal__item--full">
-              <span>Why this person</span>
-              <strong>{p.match_reasons.join(" | ")}</strong>
-            </div>
-          )}
-        </div>
-
-        <div className="gb-profile-modal__actions">
-          {p.email && (
-            <a className="gb-btn gb-btn-primary" href={emailHref(p.email, p.name)}>
-              Email now
-            </a>
-          )}
-          {linkedinHref && (
-            <a className="gb-btn gb-btn-secondary" href={linkedinHref} target="_blank" rel="noopener noreferrer">
-              LinkedIn
-            </a>
-          )}
-          {instagramHref && (
-            <a className="gb-btn gb-btn-secondary" href={instagramHref} target="_blank" rel="noopener noreferrer">
-              Instagram
-            </a>
-          )}
-        </div>
-      </aside>
-    </div>
-  );
-}
-
-function localToCard(item, badge, fallbackBody) {
-  return {
-    id: item.id,
-    badge,
-    title: item.name,
-    meta: [item.neighborhood, item.address, item.location].filter(Boolean).join(" | ") || "Nearby",
-    body: item.why_recommended || item.notes || item.summary || fallbackBody,
-    actionLabel: mapsHref(item) ? "Open in Maps" : "View",
-    actionHref: mapsHref(item),
-  };
-}
-
-function resourceToCard(resource) {
-  return {
-    id: resource.id,
-    badge: "Resource",
-    title: resource.name,
-    meta: resource.resource_type || "Support",
-    body: "Support service available in your city context.",
-    actionLabel: "View",
-    actionHref: "",
-  };
-}
-
-function buildCategoryData(match) {
-  const mentors = match?.mentors_top3 || [];
-  const peers = match?.peers_nearby || [];
-  const worship = match?.places_of_worship || [];
-  const groceries = match?.grocery_stores || [];
-  const housing = match?.housing_areas || [];
-  const places = match?.exploration_spots || [];
-  const transit = match?.transit_tips || [];
-  const resources = match?.resources || [];
-  const events = match?.community_events || [];
-
-  const keywords = toKeywords(match);
-  const yourCultureEvents = events.filter((item) => isYourCulture(item, keywords));
-  const otherCultureEvents = events.filter((item) => !isYourCulture(item, keywords));
+  const planSteps = first(plan?.steps, 12).map((step, index) => ({
+    cardId: `plan-step-${index}`,
+    id: `plan-step-${index}`,
+    title: step.action,
+    kind: weekLabel(step.day_range, index),
+    nodeId: Array.isArray(step.source_node_ids) ? step.source_node_ids[0] : null,
+    sourceNodeIds: Array.isArray(step.source_node_ids) ? step.source_node_ids : [],
+    subtitle: step.day_range || weekLabel(step.day_range, index),
+    description: step.dependency_reason,
+    why: "This action is sequenced to reduce friction in your first 30 days.",
+    avatar: "TK",
+    avatarTone: "teal",
+    trustSignals: Array.isArray(step.entities) ? step.entities.slice(0, 3) : [],
+    detailLines: [step.dependency_reason || null].filter(Boolean),
+    cta: null,
+  }));
 
   return {
     people: {
-      title: "People nearby",
-      description: "Mentors and peers matched from your graph profile.",
-      items: [...mentors.map(mentorToCard), ...peers.map(peerToCard)],
+      title: "People who can help this week",
+      description: "Mentors and peers ranked for trust, context, and practical fit.",
+      items: [...mentors, ...peers],
+      empty: "No people matches yet. Refresh your profile to repopulate support connections.",
     },
-    community: {
-      title: "Community highlights",
-      description: "Quick snapshot of local events, resources, and transit tips.",
-      items: [
-        ...events.slice(0, 4).map((item) => localToCard(item, "Event", "Community event in your area.")),
-        ...resources.slice(0, 3).map(resourceToCard),
-        ...transit.slice(0, 3).map((item) => localToCard(item, "Transit", "Transit tip near your campus.")),
-      ],
+    events: {
+      title: "Events that build belonging",
+      description: "Social and cultural touchpoints connected to your destination city.",
+      items: events,
+      empty: "No events in this snapshot. Try refreshing profile match.",
     },
-    worship: {
-      title: "Worship and belonging",
-      description: "Places connected to faith and spiritual community.",
-      items: worship.map((item) => localToCard(item, "Worship", "Faith-based gathering point.")),
-    },
-    "your-culture": {
-      title: "Your culture",
-      description: "Events and community spots that resemble your background.",
-      items: [
-        ...yourCultureEvents.map((item) => localToCard(item, "Culture", "Cultural event tied to your profile.")),
-        ...worship.filter((item) => isYourCulture(item, keywords)).map((item) => localToCard(item, "Worship", "Shared cultural context.")),
-      ],
-    },
-    "other-culture": {
-      title: "Other cultures",
-      description: "Broaden your network with nearby cross-cultural events.",
-      items: otherCultureEvents.map((item) => localToCard(item, "Event", "Cross-cultural event to explore.")),
-    },
-    resources: {
-      title: "Resources",
-      description: "Support services you can use this week.",
-      items: resources.map(resourceToCard),
-    },
-    places: {
-      title: "Places to visit",
-      description: "Comfort spots and social places around your target city.",
-      items: places.map((item) => localToCard(item, "Explore", "Popular local place to explore.")),
-    },
-    groceries: {
-      title: "Groceries and essentials",
-      description: "Stores for everyday basics.",
-      items: groceries.map((item) => localToCard(item, "Grocery", "Store for essentials and routine shopping.")),
+    food: {
+      title: "Food and essentials",
+      description: "Comfort routines matter. Start with familiar food and easy essentials.",
+      items: food,
+      empty: "No food nodes matched yet.",
     },
     housing: {
-      title: "Housing areas",
-      description: "Neighborhood options to evaluate while settling in.",
-      items: housing.map((item) => localToCard(item, "Housing", "Area connected to your profile needs.")),
+      title: "Housing and support",
+      description: "Explore safer housing context plus support offices that can unblock paperwork.",
+      items: housing,
+      empty: "No housing context found yet.",
     },
-    transit: {
-      title: "Transit",
-      description: "Mobility guidance to move safely and cheaply.",
-      items: transit.map((item) => localToCard(item, "Transit", "Transit route or station tip.")),
+    tasks: {
+      title: "Plan-linked tasks",
+      description: "These tasks are connected to graph nodes so you can jump directly to help.",
+      items: planSteps,
+      empty: "Generate your 30-day plan in Step 2 to unlock task-linked exploration.",
     },
   };
+}
+
+function weekLabel(dayRange, index) {
+  const values = (String(dayRange || "").match(/\d+/g) || []).map((value) => Number(value));
+  const lastDay = values.length ? values[values.length - 1] : (index + 1) * 7;
+  const weekNumber = Math.min(4, Math.max(1, Math.ceil(lastDay / 7)));
+  return `Week ${weekNumber}`;
+}
+
+function ExploreCard({ item, expanded, onToggle, onFocusNode }) {
+  const detailLines = Array.isArray(item.detailLines) ? item.detailLines.filter(Boolean) : [];
+  const hasNodeLinks = Array.isArray(item.sourceNodeIds) && item.sourceNodeIds.length > 0;
+
+  return (
+    <article className={`gb-explore-card ${expanded ? "gb-explore-card--expanded" : ""}`}>
+      <div className="gb-explore-card__top">
+        <div className={`gb-avatar gb-avatar--${item.avatarTone}`}>{item.avatar}</div>
+        <div className="gb-explore-card__identity">
+          <span className="gb-badge">{item.kind}</span>
+          <h4>{item.title}</h4>
+          {item.subtitle && <p>{item.subtitle}</p>}
+        </div>
+      </div>
+
+      {item.trustSignals?.length > 0 && (
+        <div className="gb-trust-row">
+          {item.trustSignals.map((signal) => (
+            <span key={`${item.cardId || item.id}-${signal}`} className="gb-chip gb-chip--soft">
+              {signal}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <p className="gb-explore-card__description">{item.description}</p>
+
+      <div className="gb-explore-card__why">
+        <strong>Why this match?</strong>
+        <p>{item.why}</p>
+      </div>
+
+      <div className="gb-explore-card__actions">
+        {item.nodeId && (
+          <button type="button" className="gb-btn gb-btn-secondary" onClick={() => onFocusNode(item.nodeId)}>
+            Focus in graph
+          </button>
+        )}
+
+        {item.cta?.href && (
+          <a className="gb-btn gb-btn-ghost" href={item.cta.href} target="_blank" rel="noopener noreferrer">
+            {item.cta.label}
+          </a>
+        )}
+
+        <button type="button" className="gb-link-btn" onClick={onToggle} aria-expanded={expanded}>
+          {expanded ? "Collapse" : "Expand"}
+        </button>
+      </div>
+
+      {expanded && (detailLines.length > 0 || hasNodeLinks) && (
+        <div className="gb-card-expand">
+          <span>More details</span>
+          {detailLines.map((line, index) => (
+            <p key={`${item.cardId || item.id}-detail-${index}`} className="gb-card-expand__text">
+              {line}
+            </p>
+          ))}
+          {hasNodeLinks && (
+            <div className="gb-chip-row">
+              {item.sourceNodeIds.map((sourceId) => (
+                <button
+                  key={`${item.cardId || item.id}-${sourceId}`}
+                  type="button"
+                  className="gb-chip gb-chip--action"
+                  onClick={() => onFocusNode(sourceId)}
+                >
+                  {sourceId}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </article>
+  );
 }
 
 export default function ExploreWorkspace({
   match,
+  plan,
   category,
   onCategoryChange,
   selectedNode,
   onNodeSelect,
   onClearNode,
+  onPathChange,
 }) {
-  const [expandedPerson, setExpandedPerson] = useState(null);
-  const categoryData = buildCategoryData(match);
+  const [expandedId, setExpandedId] = useState(null);
+  const categoryData = useMemo(() => buildCategoryData(match, plan), [match, plan]);
   const activeCategory = categoryData[category] ? category : "people";
   const active = categoryData[activeCategory];
 
-  useEffect(() => {
-    if (activeCategory !== "people") {
-      setExpandedPerson(null);
-    }
-  }, [activeCategory]);
+  const nodeMap = useMemo(() => {
+    return new Map((match?.subgraph?.nodes || []).map((node) => [node.id, node]));
+  }, [match?.subgraph?.nodes]);
+
+  const focusNode = (nodeId) => {
+    const node = nodeMap.get(nodeId);
+    if (!node) return;
+    onNodeSelect(node);
+  };
 
   return (
-    <div className="gb-explore-layout">
-      <section className="gb-card gb-explore-panel" aria-label="Explore categories">
-        <div className="gb-explore-panel__top">
-          <h2 className="gb-card-title--plain">Explore mode</h2>
-          <p className="gb-explore-panel__copy">
-            Choose what you want to focus on. Content stays compact and scrolls sideways so the page does not overflow.
-          </p>
+    <div className="gb-explore-shell">
+      <section className="gb-explore-left" aria-label="Explore categories and matches">
+        <div className="gb-explore-head">
+          <h3>Explore Nearby</h3>
+          <p>Pick a category and follow clear, human explanations for each recommendation.</p>
         </div>
 
-        <label className="gb-field gb-explore-select">
-          <span>Explore category</span>
-          <select value={activeCategory} onChange={(event) => onCategoryChange(event.target.value)}>
-            {CATEGORY_OPTIONS.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="gb-pill-row" role="tablist" aria-label="Explore categories">
+          {CATEGORY_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              role="tab"
+              aria-selected={activeCategory === option.id}
+              className={`gb-pill-tab ${activeCategory === option.id ? "gb-pill-tab--active" : ""}`}
+              onClick={() => {
+                onCategoryChange(option.id);
+                setExpandedId(null);
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
 
-        <div className="gb-explore-panel__headline">
-          <h3>{active.title}</h3>
+        <div className="gb-explore-section-head">
+          <h4>{active.title}</h4>
           <p>{active.description}</p>
         </div>
 
         {active.items.length > 0 ? (
-          <div className="gb-carousel" role="region" aria-label={`${active.title} carousel`}>
-            <div className="gb-carousel-track">
-              {active.items.map((item, index) => (
-                <article key={item.id || `${activeCategory}-${item.title}-${index}`} className="gb-carousel-card">
-                  <div className="gb-carousel-card__head">
-                    <span className="gb-badge">{item.badge}</span>
-                    <h4>{item.title}</h4>
-                  </div>
-                  {item.meta && <p className="gb-carousel-card__meta">{item.meta}</p>}
-                  {item.body && <p className="gb-carousel-card__body">{item.body}</p>}
-                  {(item.actionHref || item.profile) && (
-                    <div className="gb-carousel-card__actions">
-                      {item.actionHref && (
-                        <a className="gb-btn gb-btn-secondary gb-carousel-card__action" href={item.actionHref} target="_blank" rel="noopener noreferrer">
-                          {item.actionLabel}
-                        </a>
-                      )}
-                      {item.profile && (
-                        <button type="button" className="gb-btn gb-btn-primary gb-carousel-card__action" onClick={() => setExpandedPerson(item)}>
-                          Expand profile
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </article>
-              ))}
-            </div>
+          <div className="gb-explore-grid">
+            {active.items.map((item, index) => {
+              const cardKey = item.cardId || `${activeCategory}-${item.id || item.title}-${index}`;
+              return (
+              <ExploreCard
+                key={cardKey}
+                item={item}
+                expanded={expandedId === cardKey}
+                onToggle={() => setExpandedId((prev) => (prev === cardKey ? null : cardKey))}
+                onFocusNode={focusNode}
+              />
+              );
+            })}
           </div>
         ) : (
-          <p className="gb-explore-empty">
-            No items in this category yet. Try another tab, or refresh your profile match to pull a new evidence set.
-          </p>
+          <p className="gb-explore-empty">{active.empty}</p>
         )}
       </section>
 
-      <div className="gb-explore-graph">
+      <section className="gb-explore-right" aria-label="Support graph">
+        <div className="gb-graph-tip" role="note">
+          This graph shows your support network. Click any node to see details and possible next actions.
+        </div>
+
         <GraphCanvas
           compact
           nodes={match?.subgraph?.nodes}
           edges={match?.subgraph?.edges}
           onNodeSelect={onNodeSelect}
           selectedNodeId={selectedNode?.id}
+          onPathComputed={onPathChange}
         />
-        <NodeDetailCard node={selectedNode} onClear={onClearNode} />
-      </div>
-      <PersonProfileModal item={expandedPerson} onClose={() => setExpandedPerson(null)} />
+
+        <aside className="gb-side-panel" aria-label="Node details">
+          {selectedNode ? (
+            <NodeDetailCard node={selectedNode} onClear={onClearNode} />
+          ) : (
+            <div className="gb-side-panel__empty">
+              Select a graph node to understand who or what can help you next.
+            </div>
+          )}
+        </aside>
+      </section>
     </div>
   );
 }

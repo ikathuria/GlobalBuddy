@@ -1,10 +1,42 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import client from "../api/client.js";
 import CulturalBridgeDrawer from "./CulturalBridgeDrawer.jsx";
 
 const QUICK_TERMS = ["security deposit", "credit score", "SSN"];
 
-export default function PlanPanel({ sessionId, matchPayload }) {
+function weekLabel(dayRange, index) {
+  const values = (String(dayRange || "").match(/\d+/g) || []).map((value) => Number(value));
+  const lastDay = values.length ? values[values.length - 1] : (index + 1) * 7;
+  const weekNumber = Math.min(4, Math.max(1, Math.ceil(lastDay / 7)));
+  return `Week ${weekNumber}`;
+}
+
+function stepId(step, index) {
+  return `${index}:${step.day_range}:${step.action}`;
+}
+
+function storageKey(sessionId) {
+  return `gb_plan_progress_${sessionId || "unknown"}`;
+}
+
+function readProgress(sessionId) {
+  if (!sessionId) return {};
+  try {
+    const raw = localStorage.getItem(storageKey(sessionId));
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveProgress(sessionId, value) {
+  if (!sessionId) return;
+  localStorage.setItem(storageKey(sessionId), JSON.stringify(value));
+}
+
+export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocusNode, onOpenExplore }) {
   const [plan, setPlan] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [loadingBridge, setLoadingBridge] = useState(false);
@@ -13,10 +45,38 @@ export default function PlanPanel({ sessionId, matchPayload }) {
   const [term, setTerm] = useState("security deposit");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bridge, setBridge] = useState(null);
+  const [expandedStepIds, setExpandedStepIds] = useState({});
+  const [completed, setCompleted] = useState(() => readProgress(sessionId));
+
+  useEffect(() => {
+    setCompleted(readProgress(sessionId));
+  }, [sessionId]);
+
+  useEffect(() => {
+    onPlanReady?.(plan);
+  }, [plan, onPlanReady]);
+
+  const groupedTimeline = useMemo(() => {
+    const groups = new Map();
+    (plan?.steps || []).forEach((step, index) => {
+      const label = weekLabel(step.day_range, index);
+      const existing = groups.get(label) || [];
+      existing.push({ step, index, id: stepId(step, index) });
+      groups.set(label, existing);
+    });
+    return Array.from(groups.entries());
+  }, [plan?.steps]);
+
+  const completionSummary = useMemo(() => {
+    const steps = plan?.steps || [];
+    if (!steps.length) return { done: 0, total: 0 };
+    const done = steps.reduce((count, step, index) => count + (completed[stepId(step, index)] ? 1 : 0), 0);
+    return { done, total: steps.length };
+  }, [plan?.steps, completed]);
 
   async function generatePlan() {
     if (!sessionId || !matchPayload?.evidence_bundle) {
-      setPlanError("Run profile match first.");
+      setPlanError("Complete profile setup first.");
       return;
     }
 
@@ -24,14 +84,15 @@ export default function PlanPanel({ sessionId, matchPayload }) {
     setPlanError(null);
 
     try {
-      const res = await client.post("/v1/plan/generate", {
+      const response = await client.post("/v1/plan/generate", {
         session_id: sessionId,
         student_profile: matchPayload.evidence_bundle.student_profile || {},
         evidence_bundle: matchPayload.evidence_bundle,
       });
-      setPlan(res.data);
-    } catch (err) {
-      setPlanError(err.response?.data?.detail || err.message);
+      setPlan(response.data);
+      setExpandedStepIds({});
+    } catch (error) {
+      setPlanError(error.response?.data?.detail || error.message);
     } finally {
       setLoadingPlan(false);
     }
@@ -40,7 +101,7 @@ export default function PlanPanel({ sessionId, matchPayload }) {
   async function explainTerm(termToUse) {
     const nextTerm = (termToUse ?? term).trim();
     if (!sessionId) {
-      setBridgeError("Run profile match first.");
+      setBridgeError("Complete profile setup first.");
       setDrawerOpen(true);
       return;
     }
@@ -52,16 +113,16 @@ export default function PlanPanel({ sessionId, matchPayload }) {
     setDrawerOpen(true);
 
     try {
-      const res = await client.post("/v1/bridge/explain", {
+      const response = await client.post("/v1/bridge/explain", {
         session_id: sessionId,
         term: nextTerm,
         home_country: matchPayload?.evidence_bundle?.student_profile?.country_of_origin || "India",
         context: "off-campus rental and banking setup",
       });
-      setBridge(res.data);
+      setBridge(response.data);
       setTerm(nextTerm);
-    } catch (err) {
-      setBridgeError(err.response?.data?.detail || err.message);
+    } catch (error) {
+      setBridgeError(error.response?.data?.detail || error.message);
     } finally {
       setLoadingBridge(false);
     }
@@ -71,27 +132,52 @@ export default function PlanPanel({ sessionId, matchPayload }) {
     explainTerm(term);
   }
 
+  function toggleComplete(step, index) {
+    const id = stepId(step, index);
+    setCompleted((previous) => {
+      const next = { ...previous, [id]: !previous[id] };
+      saveProgress(sessionId, next);
+      return next;
+    });
+  }
+
+  function toggleExpand(step, index) {
+    const id = stepId(step, index);
+    setExpandedStepIds((previous) => ({ ...previous, [id]: !previous[id] }));
+  }
+
   return (
-    <>
-      <section className="gb-card">
-        <h2>Survival plan and cultural bridge</h2>
-        <p style={{ margin: "0 0 1rem", color: "var(--gb-muted)", fontSize: "0.9rem" }}>
-          Keep this focused and fast: decode a US term first, then generate your 30-day plan from graph evidence.
+    <div className="gb-plan-shell">
+      <div className="gb-plan-head">
+        <h3>Your First 30 Days Plan</h3>
+        <p>
+          A calm week-by-week path grounded in your profile and support graph. Mark tasks done as you move forward.
         </p>
+      </div>
 
-        <h3 className="gb-card-title--plain" style={{ marginBottom: "0.5rem" }}>
-          Explain a US term
-        </h3>
-        <p style={{ margin: "0 0 0.85rem", color: "var(--gb-muted)", fontSize: "0.88rem" }}>
-          Opens the cultural bridge drawer with a structured explanation.
-        </p>
+      <div className="gb-plan-toolbar">
+        <button type="button" className="gb-btn gb-btn-primary" onClick={generatePlan} disabled={loadingPlan || loadingBridge}>
+          {loadingPlan ? "Building your plan..." : plan ? "Refresh plan" : "Generate my 30-day plan"}
+        </button>
 
-        <div className="gb-actions">
+        {plan && (
+          <button type="button" className="gb-btn gb-btn-secondary" onClick={onOpenExplore}>
+            Open graph with plan context
+          </button>
+        )}
+      </div>
+
+      <div className="gb-bridge-box">
+        <div className="gb-bridge-box__head">
+          <strong>Need clarity on a US term?</strong>
+          <span>Use Cultural Bridge for plain-language context before taking action.</span>
+        </div>
+        <div className="gb-bridge-box__controls">
           <input
             value={term}
-            onChange={(e) => setTerm(e.target.value)}
-            placeholder="e.g. security deposit"
-            aria-label="Term to explain"
+            onChange={(event) => setTerm(event.target.value)}
+            placeholder="security deposit"
+            aria-label="US term to explain"
             disabled={loadingBridge}
           />
           <button
@@ -100,17 +186,15 @@ export default function PlanPanel({ sessionId, matchPayload }) {
             onClick={() => explainTerm()}
             disabled={loadingBridge || loadingPlan}
           >
-            Explain term
+            {loadingBridge ? "Explaining..." : "Explain term"}
           </button>
         </div>
-
-        <div className="gb-strip" style={{ marginTop: "0.65rem" }}>
+        <div className="gb-chip-row">
           {QUICK_TERMS.map((quickTerm) => (
             <button
               key={quickTerm}
               type="button"
               className="gb-chip"
-              style={{ cursor: "pointer", border: "none", font: "inherit" }}
               onClick={() => {
                 setTerm(quickTerm);
                 explainTerm(quickTerm);
@@ -121,92 +205,125 @@ export default function PlanPanel({ sessionId, matchPayload }) {
             </button>
           ))}
         </div>
+      </div>
 
-        <hr style={{ border: "none", borderTop: "1px solid var(--gb-border)", margin: "1.25rem 0" }} />
+      {loadingPlan && (
+        <div className="gb-plan-skeletons" aria-live="polite">
+          <div className="gb-skeleton" style={{ height: 36 }} />
+          <div className="gb-skeleton" style={{ height: 84 }} />
+          <div className="gb-skeleton" style={{ height: 84 }} />
+        </div>
+      )}
 
-        <h3 className="gb-card-title--plain" style={{ marginBottom: "0.5rem" }}>
-          Generate your first 30 days
-        </h3>
-        <p style={{ margin: "0 0 0.85rem", color: "var(--gb-muted)", fontSize: "0.88rem" }}>
-          Structured JSON output from your evidence bundle only.
-        </p>
-
-        <div className="gb-actions">
-          <button
-            type="button"
-            className="gb-btn gb-btn-primary"
-            onClick={generatePlan}
-            disabled={loadingPlan || loadingBridge}
-          >
-            {loadingPlan ? "Generating..." : "Generate my first 30 days"}
+      {planError && (
+        <div className="gb-error">
+          {typeof planError === "string" ? planError : JSON.stringify(planError)}
+          <button type="button" className="gb-btn gb-btn-secondary" onClick={generatePlan}>
+            Retry
           </button>
         </div>
+      )}
 
-        {loadingPlan && (
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.65rem", marginBottom: "1rem" }}>
-            <div className="gb-skeleton" style={{ height: 36 }} />
-            <div className="gb-skeleton" style={{ height: 72 }} />
-            <div className="gb-skeleton" style={{ height: 72 }} />
-          </div>
-        )}
-
-        {planError && (
-          <div className="gb-error" style={{ marginTop: "0.75rem" }}>
-            {typeof planError === "string" ? planError : JSON.stringify(planError)}
-            <button type="button" className="gb-btn gb-btn-secondary" style={{ marginTop: "0.65rem" }} onClick={generatePlan}>
-              Retry
-            </button>
-          </div>
-        )}
-
-        {plan && !loadingPlan && (
-          <div>
-            {plan.best_next_action && (
-              <div className="gb-best-next">
-                <div className="gb-best-next__label">Best next action</div>
-                <div>{plan.best_next_action}</div>
-              </div>
-            )}
-            <h3 style={{ margin: "0 0 0.5rem", fontSize: "1.05rem" }}>{plan.plan_title}</h3>
-            <p className="gb-meta">
-              {plan.llm_provider} | fallback {String(plan.fallback_used)} | confidence {plan.confidence}
-            </p>
-            <div className="gb-steps">
-              {(plan.steps || []).map((step, index) => (
-                <div key={index} className="gb-step">
-                  <div>
-                    <strong>{step.day_range}</strong>
-                  </div>
-                  <div>{step.action}</div>
-                  <div className="gb-step-detail">
-                    {(step.entities || []).join(" | ")} | {step.dependency_reason}
-                  </div>
-                </div>
-              ))}
+      {plan && !loadingPlan && (
+        <section className="gb-plan-timeline" aria-label="30-day timeline">
+          <div className="gb-plan-summary">
+            <div>
+              <h4>{plan.plan_title}</h4>
+              {plan.best_next_action && <p>{plan.best_next_action}</p>}
             </div>
-
-            {(plan.warnings || []).length > 0 && (
-              <div style={{ marginTop: "1rem" }}>
-                <h3
-                  style={{
-                    fontSize: "0.85rem",
-                    color: "var(--gb-muted)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                  }}
-                >
-                  Warnings
-                </h3>
-                <ul style={{ margin: "0.5rem 0 0", paddingLeft: "1.2rem", color: "var(--gb-muted)", fontSize: "0.88rem" }}>
-                  {plan.warnings.map((warning, index) => (
-                    <li key={index}>{warning}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div className="gb-plan-progress-pill">
+              {completionSummary.done} / {completionSummary.total} tasks complete
+            </div>
           </div>
-        )}
-      </section>
+
+          <div className="gb-plan-meta">
+            Provider: {plan.llm_provider} | fallback: {String(plan.fallback_used)} | confidence: {plan.confidence}
+          </div>
+
+          {groupedTimeline.map(([week, items]) => (
+            <div key={week} className="gb-week-block">
+              <div className="gb-week-label">{week}</div>
+
+              <div className="gb-week-tasks">
+                {items.map(({ step, index, id }) => {
+                  const isDone = Boolean(completed[id]);
+                  const expanded = Boolean(expandedStepIds[id]);
+                  const sourceIds = Array.isArray(step.source_node_ids) ? step.source_node_ids : [];
+
+                  return (
+                    <article key={id} className={`gb-plan-task ${isDone ? "gb-plan-task--done" : ""}`}>
+                      <div className="gb-plan-task__row">
+                        <button
+                          type="button"
+                          className={`gb-plan-task__check ${isDone ? "gb-plan-task__check--done" : ""}`}
+                          onClick={() => toggleComplete(step, index)}
+                          aria-label={isDone ? "Mark task incomplete" : "Mark task complete"}
+                        >
+                          {isDone ? "Done" : "Mark done"}
+                        </button>
+
+                        <div className="gb-plan-task__body">
+                          <div className="gb-plan-task__topline">
+                            <span className="gb-plan-task__range">{step.day_range || week}</span>
+                            <button type="button" className="gb-link-btn" onClick={() => toggleExpand(step, index)}>
+                              {expanded ? "Hide context" : "Why this matters culturally"}
+                            </button>
+                          </div>
+                          <p>{step.action}</p>
+
+                          {Array.isArray(step.entities) && step.entities.length > 0 && (
+                            <div className="gb-plan-entities">
+                              {step.entities.map((entity) => (
+                                <span key={`${id}-${entity}`} className="gb-chip gb-chip--soft">
+                                  {entity}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {sourceIds.length > 0 && (
+                            <div className="gb-plan-node-links">
+                              <span>Connected graph nodes:</span>
+                              {sourceIds.map((sourceId) => (
+                                <button
+                                  key={`${id}-${sourceId}`}
+                                  type="button"
+                                  className="gb-btn gb-btn-ghost"
+                                  onClick={() => onFocusNode?.(sourceId)}
+                                >
+                                  {sourceId}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {expanded && (
+                            <div className="gb-plan-explain">
+                              <strong>Why this matters culturally</strong>
+                              <p>{step.dependency_reason}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+
+          {(plan.warnings || []).length > 0 && (
+            <div className="gb-plan-warnings">
+              <strong>Heads up</strong>
+              <ul>
+                {plan.warnings.map((warning, index) => (
+                  <li key={`${warning}-${index}`}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       <CulturalBridgeDrawer
         open={drawerOpen}
@@ -216,6 +333,6 @@ export default function PlanPanel({ sessionId, matchPayload }) {
         error={bridgeError}
         onRetry={bridgeError ? retryBridge : undefined}
       />
-    </>
+    </div>
   );
 }
