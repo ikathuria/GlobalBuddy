@@ -24,7 +24,11 @@ class AnthropicHttpProvider:
         evidence_bundle: dict[str, Any],
         student_profile: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        system = "Return JSON only. Ground in evidence_bundle. Include best_next_action."
+        system = (
+            "Return JSON only. Ground every entity name in evidence_bundle (including places_of_worship, "
+            "grocery_stores, housing_areas, exploration_spots, transit_tips when present). Include best_next_action. "
+            "Do not invent routes, schedules, or live event times."
+        )
         user_text = json.dumps(
             {"student_profile": student_profile, "evidence_bundle": evidence_bundle},
             ensure_ascii=False,

@@ -9,11 +9,11 @@ Motto: *You didn’t come this far to figure it out alone.*
 - **Documentation** in `docs/` (BRD, SRS, architecture, API, agents, prompts, demo runbook).
 - **Backend** — FastAPI, Neo4j access, `/v1` routers, provider-based AI (`backend/app/services/ai/`).
 - **Frontend** — Vite + React command center: profile match, vis-network graph, plan generation, cultural bridge drawer.
-- **Seed data** — `data/seed/*.cypher` (MERGE-only) including the Priya demo path (Chicago / Illinois Institute of Technology, HackWithChicago 3.0, Luma, IIT OIA).
+- **Seed data** — `data/seed/*.cypher` (MERGE-only) including the Priya demo path (Chicago / Illinois Institute of Technology, HackWithChicago 3.0, Luma, IIT OIA) plus **`chicago_belonging.cypher`**: places of worship, groceries, housing clusters near IIT, downtown exploration spots, transit tips, and curated cultural/religious **Event** nodes with explicit “verify dates” notes (not live calendars).
 
 ## Architecture (vertical slice)
 
-1. Student submits profile → `POST /v1/profile/match` queries Neo4j, ranks mentors, builds **evidence bundle** + **subgraph**, stores session.
+1. Student submits profile → `POST /v1/profile/match` queries Neo4j, ranks mentors, returns **Chicago local intelligence** lists (worship, groceries, housing, exploration, transit) with deterministic tag overlap vs optional profile fields (`religion_or_observance`, `diet`, `cultural_background`, `interests`), builds **evidence bundle** + **subgraph**, stores session.
 2. `POST /v1/plan/generate` loads evidence from the session (or request body), calls the **Judge** path through `get_ai_provider(settings)` → **Gemini** when `GEMINI_API_KEY` is set (`AI_PROVIDER=gemini` or `auto`).
 3. `POST /v1/bridge/explain` runs the **Cultural Bridge** path through the same provider abstraction with structured JSON output and deterministic fallback on failure.
 4. `GET /v1/graph/subgraph?session_id=…` returns the stored subgraph for vis-network.
@@ -55,6 +55,8 @@ Edit `.env` with Neo4j and Gemini (or another provider).
 ### Seed Neo4j (run after DB is empty or idempotent re-run)
 
 Seeding only needs **`NEO4J_URI`**, **`NEO4J_USER`**, **`NEO4J_PASSWORD`**. You do not need an LLM key to seed.
+
+Files run in order: `nodes.cypher` → `relationships.cypher` → `demo_priya.cypher` → **`chicago_belonging.cypher`** (local graph extension).
 
 ```bash
 cd backend
@@ -101,9 +103,9 @@ Covers health, profile match response shape, plan/bridge response shapes, and ag
 1. Seed Neo4j once per environment (`python -m app.db.seed_data`).
 2. Configure `GEMINI_API_KEY` (and Neo4j) in `backend/.env`; start backend and frontend.
 3. Confirm **API live** and Neo4j node count in the status panel (use **Retry check** if needed).
-4. Submit the profile form (defaults: **Illinois Institute of Technology**, **Chicago**) → review **support / belonging scores**, mentor cards with **confidence** and **Why this match?**
-5. Explore the **evidence graph** (hover tooltips, click nodes for detail); student/mentor/event/restaurant/resource colors are distinct.
-6. Click **Generate my first 30 days** — structured plan with **best next action** at the top (evidence-grounded JSON).
+4. Submit the profile form (defaults: **Illinois Institute of Technology**, **Chicago**; optional religion/diet fields tune ranking) → review **support**, **belonging**, and **cultural fit** scores; open **Feel at home · Chicago** for worship, verified-note events, groceries, housing, transit, and **Open in Google Maps** / optional **map preview** (embed from `maps_query`, no Maps API key).
+5. Explore the **evidence graph** (hover tooltips, click nodes for rich detail, Maps links); local node colors include worship, grocery, housing, exploration, and transit.
+6. Click **Generate my first 30 days** — structured plan with **best next action** at the top (evidence-grounded JSON; Judge prompt allows only named entities from the bundle, including local lists).
 7. Use **Explain term** or quick chips → **Cultural bridge** drawer (plain explanation, analogy, mistakes, next steps). Press **Escape** to close.
 
 ## Documentation index

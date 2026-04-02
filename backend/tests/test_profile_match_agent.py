@@ -53,6 +53,9 @@ def _event_rows() -> list[dict]:
             "start_time": "2026-04-12T09:00:00Z",
             "location": "Chicago Loop",
             "category": "hackathon",
+            "notes": "",
+            "maps_query": "HackWithChicago Chicago",
+            "maps_link": "",
         }
     ]
 
@@ -60,6 +63,88 @@ def _event_rows() -> list[dict]:
 def _resource_rows() -> list[dict]:
     return [
         {"id": "resource_chase_south_loop", "name": "Chase Bank - South Loop / Grant Park", "resource_type": "banking"}
+    ]
+
+
+def _worship_rows() -> list[dict]:
+    return [
+        {
+            "id": "pow_test",
+            "name": "Test Temple",
+            "subtype": "hindu_temple",
+            "address": "1 Devon Ave",
+            "neighborhood": "Devon",
+            "latitude": 41.99,
+            "longitude": -87.7,
+            "maps_query": "Test Temple Chicago",
+            "maps_link": "",
+            "audience_tags": ["hindu", "south_asian"],
+            "relevant_countries": ["India"],
+        }
+    ]
+
+
+def _grocery_rows() -> list[dict]:
+    return [
+        {
+            "id": "grocery_test",
+            "name": "Test Grocery",
+            "address": "2 Devon Ave",
+            "neighborhood": "Devon",
+            "latitude": 42.0,
+            "longitude": -87.69,
+            "maps_query": "Test Grocery",
+            "maps_link": "",
+            "diet_tags": ["vegetarian"],
+            "relevant_countries": ["India"],
+        }
+    ]
+
+
+def _housing_rows() -> list[dict]:
+    return [
+        {
+            "id": "housing_test",
+            "name": "Test Housing",
+            "address": "Near campus",
+            "neighborhood": "Bronzeville",
+            "latitude": 41.84,
+            "longitude": -87.62,
+            "maps_query": "Test Housing",
+            "maps_link": "",
+            "audience_tags": ["near_iit", "student_friendly"],
+        }
+    ]
+
+
+def _explore_rows() -> list[dict]:
+    return [
+        {
+            "id": "ex_test",
+            "name": "Test Museum",
+            "subtype": "museum",
+            "address": "Downtown",
+            "neighborhood": "Loop",
+            "latitude": 41.88,
+            "longitude": -87.62,
+            "maps_query": "Test Museum Chicago",
+            "maps_link": "",
+            "audience_tags": ["downtown", "weekend"],
+        }
+    ]
+
+
+def _transit_rows() -> list[dict]:
+    return [
+        {
+            "id": "tt_test",
+            "name": "Test Transit Tip",
+            "summary": "Example CTA tip.",
+            "route_hint": "Green Line to IIT — verify on transitchicago.com.",
+            "neighborhood": "Bronzeville",
+            "maps_link": "",
+            "maps_query": "",
+        }
     ]
 
 
@@ -98,6 +183,16 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
             return _peer_rows()
         if "Restaurant" in cypher:
             return _rest_rows()
+        if ":PlaceOfWorship" in cypher:
+            return _worship_rows()
+        if ":GroceryStore" in cypher:
+            return _grocery_rows()
+        if ":HousingArea" in cypher:
+            return _housing_rows()
+        if ":ExplorationSpot" in cypher:
+            return _explore_rows()
+        if ":TransitTip" in cypher:
+            return _transit_rows()
         if "Event" in cypher and "RELEVANT_TO" in cypher:
             return _event_rows()
         if "Resource" in cypher and "HELPS_WITH" in cypher:
@@ -116,6 +211,8 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
         target_city="Chicago",
         needs=["banking", "housing"],
         interests=["south indian food"],
+        religion_or_observance="Hindu",
+        diet="vegetarian",
     )
     result = await run_profile_match(neo4j, profile)
     assert result.session_id
@@ -125,4 +222,8 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
     eb = result.evidence_bundle
     assert "mentors" in eb
     assert "tasks_ordered" in eb
+    assert "places_of_worship" in eb
+    assert "grocery_stores" in eb
+    assert "transit_tips" in eb
+    assert result.places_of_worship and result.places_of_worship[0].name == "Test Temple"
     assert isinstance(result.subgraph.nodes, list)

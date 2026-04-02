@@ -80,6 +80,9 @@ export default function MatchCards({ match }) {
         <span>
           Belonging score: <strong>{pct(match.belonging_score)}</strong>
         </span>
+        <span>
+          Cultural fit: <strong>{pct(match.cultural_fit_score)}</strong>
+        </span>
       </div>
       {mentors.length === 0 ? (
         <p style={{ margin: 0, color: "var(--gb-muted)", fontSize: "0.9rem" }}>No mentor nodes matched this profile yet.</p>

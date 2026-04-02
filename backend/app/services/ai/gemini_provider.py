@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 _JUDGE_PROMPT = """You are GlobalBuddy's Judge Agent.
 Output a single JSON object only. Use ONLY entities and tasks present in evidence_bundle JSON.
 Rules:
-1) Cite actual names from evidence in each step's entities list.
+1) Cite actual names from evidence in each step's entities list (mentors, peers, restaurants, events, resources, places_of_worship, grocery_stores, housing_areas, exploration_spots, transit_tips).
 2) Respect tasks_ordered order for dependencies.
 3) Include best_next_action: one concrete sentence for the single most important immediate action.
 4) confidence between 0 and 1.
+5) Chicago local intelligence: you may weave in worship, grocery, housing areas, exploration spots, and transit tips when those arrays are non-empty — only by naming nodes that appear there. Do not invent routes, schedules, times, or live event dates; if timing is unknown, say so and point to graph notes/maps_query for the student to verify.
 
 Schema:
 {

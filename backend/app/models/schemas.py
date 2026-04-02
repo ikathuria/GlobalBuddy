@@ -16,6 +16,12 @@ class ProfileMatchRequest(BaseModel):
     target_city: str
     needs: list[str]
     interests: list[str] = Field(default_factory=list)
+    cultural_background: str = Field(default="", description="Optional; used for deterministic cultural-fit ranking.")
+    religion_or_observance: str = Field(
+        default="",
+        description="Optional; e.g. Hindu, Muslim, Sikh, Christian — matched to graph tags.",
+    )
+    diet: str = Field(default="", description="Optional; e.g. vegetarian, halal — matched to graph diet tags.")
 
 
 class MentorCard(BaseModel):
@@ -63,6 +69,34 @@ class EventCard(BaseModel):
     start_time: str
     location: str
     category: str
+    notes: str = Field(default="", description="Seeded disclaimer or context; not a live schedule.")
+    maps_query: str = Field(default="", description="For Google Maps search / embed.")
+    maps_link: str = Field(default="", description="Optional prebuilt maps URL.")
+
+
+class LocalPlaceCard(BaseModel):
+    """Worship, grocery, housing cluster, or downtown exploration — from Neo4j local intelligence nodes."""
+
+    id: str
+    name: str
+    place_kind: str = Field(description="worship | grocery | housing | exploration")
+    subtype: str = Field(default="", description="temple, mosque, market, etc.")
+    address: str = ""
+    neighborhood: str = ""
+    latitude: float | None = None
+    longitude: float | None = None
+    maps_query: str = ""
+    maps_link: str = ""
+    why_recommended: str = Field(default="", description="Deterministic rationale from graph tags and profile.")
+
+
+class TransitTipCard(BaseModel):
+    id: str
+    name: str
+    summary: str
+    route_hint: str
+    neighborhood: str = ""
+    maps_link: str = ""
 
 
 class ResourceCard(BaseModel):
@@ -76,6 +110,10 @@ class GraphNode(BaseModel):
     label: str
     group: str
     subtitle: str | None = None
+    address: str | None = None
+    maps_query: str | None = None
+    maps_link: str | None = None
+    why_recommended: str | None = None
 
 
 class GraphEdge(BaseModel):
@@ -98,6 +136,11 @@ class ProfileMatchResponse(BaseModel):
     cultural_restaurants: list[RestaurantCard]
     community_events: list[EventCard]
     resources: list[ResourceCard]
+    places_of_worship: list[LocalPlaceCard] = Field(default_factory=list)
+    grocery_stores: list[LocalPlaceCard] = Field(default_factory=list)
+    housing_areas: list[LocalPlaceCard] = Field(default_factory=list)
+    exploration_spots: list[LocalPlaceCard] = Field(default_factory=list)
+    transit_tips: list[TransitTipCard] = Field(default_factory=list)
     evidence_bundle: dict[str, Any]
     subgraph: Subgraph
     support_coverage_score: float = Field(
@@ -111,6 +154,16 @@ class ProfileMatchResponse(BaseModel):
         ge=0.0,
         le=1.0,
         description="Composite 'connectedness' from peers, events, food, mentors.",
+    )
+    cultural_fit_score: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="Overlap of profile signals with local worship/grocery/event tags (deterministic).",
+    )
+    best_weekend_outing: str = Field(
+        default="",
+        description="Single graph-grounded suggestion from exploration + events (deterministic).",
     )
 
 

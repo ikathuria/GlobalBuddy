@@ -14,6 +14,7 @@ _SEED_FILES = (
     "nodes.cypher",
     "relationships.cypher",
     "demo_priya.cypher",
+    "chicago_belonging.cypher",
 )
 
 

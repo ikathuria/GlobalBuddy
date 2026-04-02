@@ -8,6 +8,9 @@ const defaultProfile = {
   target_city: "Chicago",
   needs: "banking, housing, community",
   interests: "south indian food, hackathons, tech meetups, Luma events",
+  cultural_background: "South Indian",
+  religion_or_observance: "Hindu",
+  diet: "vegetarian",
 };
 
 export default function ProfileForm({ onMatch }) {
@@ -41,8 +44,8 @@ export default function ProfileForm({ onMatch }) {
     <section className="gb-card">
       <h2>Your profile</h2>
       <p style={{ margin: "0 0 1rem", color: "var(--gb-muted)", fontSize: "0.9rem" }}>
-        We query Neo4j for mentors, peers, restaurants, events, and resources — then build a subgraph for the
-        canvas.
+        We query Neo4j for mentors, peers, restaurants, events, resources, and Chicago local nodes (worship, groceries,
+        housing, exploration, transit) — then build a subgraph for the canvas.
       </p>
       <form onSubmit={submit}>
         <div className="gb-form-grid">
@@ -89,6 +92,26 @@ export default function ProfileForm({ onMatch }) {
               value={form.interests}
               onChange={(e) => setForm({ ...form, interests: e.target.value })}
             />
+          </label>
+          <label className="gb-field gb-field--full">
+            <span>Cultural background (optional)</span>
+            <input
+              value={form.cultural_background}
+              onChange={(e) => setForm({ ...form, cultural_background: e.target.value })}
+              placeholder="e.g. South Asian"
+            />
+          </label>
+          <label className="gb-field">
+            <span>Religion / observance (optional)</span>
+            <input
+              value={form.religion_or_observance}
+              onChange={(e) => setForm({ ...form, religion_or_observance: e.target.value })}
+              placeholder="Hindu, Muslim, Sikh…"
+            />
+          </label>
+          <label className="gb-field">
+            <span>Diet (optional)</span>
+            <input value={form.diet} onChange={(e) => setForm({ ...form, diet: e.target.value })} placeholder="vegetarian, halal…" />
           </label>
         </div>
         <div style={{ marginTop: "1.15rem" }}>

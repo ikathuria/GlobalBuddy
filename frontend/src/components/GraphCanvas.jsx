@@ -11,6 +11,11 @@ const GRAPH_GROUP_STYLES = {
   event: { bg: "#86198f", border: "#e879f9", label: "Event" },
   resource: { bg: "#075985", border: "#38bdf8", label: "Resource" },
   task: { bg: "#1e293b", border: "#94a3b8", label: "Task" },
+  place_worship: { bg: "#4c1d95", border: "#c4b5fd", label: "Worship" },
+  grocery: { bg: "#14532d", border: "#86efac", label: "Grocery" },
+  housing_area: { bg: "#713f12", border: "#fcd34d", label: "Housing" },
+  exploration: { bg: "#0e7490", border: "#67e8f9", label: "Explore" },
+  transit_tip: { bg: "#334155", border: "#cbd5e1", label: "Transit" },
 };
 
 const VIS_OPTIONS = {

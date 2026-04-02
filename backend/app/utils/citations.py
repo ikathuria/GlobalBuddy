@@ -21,6 +21,11 @@ def validate_entity_citations(
         "community_events",
         "events",
         "resources",
+        "places_of_worship",
+        "grocery_stores",
+        "housing_areas",
+        "exploration_spots",
+        "transit_tips",
     )
     for key in list_keys:
         for item in evidence_bundle.get(key, []) or []:

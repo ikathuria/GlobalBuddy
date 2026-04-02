@@ -27,7 +27,11 @@ class HttpRocketRideProvider:
         student_profile: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
         return await self._post(
-            system_prompt="Return JSON plan grounded in evidence_bundle only.",
+            system_prompt=(
+                "Return JSON plan grounded in evidence_bundle only; cite names only from bundle lists "
+                "(mentors, peers, restaurants, events, resources, places_of_worship, grocery_stores, "
+                "housing_areas, exploration_spots, transit_tips). No invented routes or live schedules."
+            ),
             user_payload={"student_profile": student_profile, "evidence_bundle": evidence_bundle},
             schema_hint='{"plan_title":"","best_next_action":"","steps":[],"priority_contacts":[],"warnings":[],"confidence":0}',
         )

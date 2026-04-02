@@ -7,6 +7,7 @@ import MatchCards from "./components/MatchCards.jsx";
 import Banner from "./components/Banner.jsx";
 import NodeDetailCard from "./components/NodeDetailCard.jsx";
 import CommunitySignup from "./components/CommunitySignup.jsx";
+import CommunityFitPanel from "./components/CommunityFitPanel.jsx";
 
 export default function App() {
   const [match, setMatch] = useState(null);
@@ -56,6 +57,7 @@ export default function App() {
 
           <div className="gb-col gb-col-center">
             <MatchCards match={match} />
+            <CommunityFitPanel match={match} />
             <GraphCanvas
               nodes={match?.subgraph?.nodes}
               edges={match?.subgraph?.edges}

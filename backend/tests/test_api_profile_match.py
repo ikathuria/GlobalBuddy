@@ -29,6 +29,8 @@ def fake_match_response() -> ProfileMatchResponse:
         ),
         support_coverage_score=0.5,
         belonging_score=0.4,
+        cultural_fit_score=0.42,
+        best_weekend_outing="Graph pick: Example",
     )
 
 
@@ -58,6 +60,9 @@ def test_profile_match_endpoint_shape(api_client: object, monkeypatch: pytest.Mo
     assert "subgraph" in data and "nodes" in data["subgraph"] and "edges" in data["subgraph"]
     assert "support_coverage_score" in data
     assert "belonging_score" in data
+    assert "cultural_fit_score" in data
+    assert "best_weekend_outing" in data
+    assert "places_of_worship" in data
 
 
 def test_subgraph_edge_from_alias_roundtrip() -> None:

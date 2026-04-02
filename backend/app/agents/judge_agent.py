@@ -18,6 +18,11 @@ def _fallback_plan(evidence_bundle: dict[str, Any]) -> PlanGenerateResponse:
     tasks = evidence_bundle.get("tasks_ordered") or []
     resources = evidence_bundle.get("resources") or []
     mentors = evidence_bundle.get("mentors") or []
+    worship = evidence_bundle.get("places_of_worship") or []
+    groceries = evidence_bundle.get("grocery_stores") or []
+    housing = evidence_bundle.get("housing_areas") or []
+    explore = evidence_bundle.get("exploration_spots") or []
+    transit = evidence_bundle.get("transit_tips") or []
     res_names = [r.get("name", "") for r in resources if isinstance(r, dict)]
     mentor_name = mentors[0].get("name", "a matched mentor") if mentors else "International Student Services"
     steps: list[PlanStep] = []
@@ -40,6 +45,44 @@ def _fallback_plan(evidence_bundle: dict[str, Any]) -> PlanGenerateResponse:
                 source_node_ids=[tid],
             )
         )
+    local_bits: list[str] = []
+    if isinstance(worship, list) and worship:
+        n0 = worship[0].get("name") if isinstance(worship[0], dict) else ""
+        if n0:
+            local_bits.append(f"community / worship: {n0}")
+    if isinstance(groceries, list) and groceries:
+        g0 = groceries[0].get("name") if isinstance(groceries[0], dict) else ""
+        if g0:
+            local_bits.append(f"groceries: {g0}")
+    if isinstance(housing, list) and housing:
+        h0 = housing[0].get("name") if isinstance(housing[0], dict) else ""
+        if h0:
+            local_bits.append(f"housing cluster: {h0}")
+    if isinstance(explore, list) and explore:
+        x0 = explore[0].get("name") if isinstance(explore[0], dict) else ""
+        if x0:
+            local_bits.append(f"downtown / explore: {x0}")
+    if isinstance(transit, list) and transit:
+        t0 = transit[0].get("name") if isinstance(transit[0], dict) else ""
+        if t0:
+            local_bits.append(f"transit tip: {t0}")
+
+    if local_bits:
+        ent_local = [x.split(": ", 1)[-1] for x in local_bits]
+        steps.append(
+            PlanStep(
+                day_range="Weekend 1",
+                action=(
+                    "Use Neo4j local matches for belonging and navigation: review "
+                    + "; ".join(local_bits)
+                    + ". Open Maps links from the match response only; verify hours and schedules independently."
+                ),
+                entities=ent_local[:5],
+                dependency_reason="Grounded in graph places_of_worship, grocery_stores, housing_areas, exploration_spots, transit_tips.",
+                source_node_ids=[],
+            )
+        )
+
     best = ""
     if steps:
         best = steps[0].action
