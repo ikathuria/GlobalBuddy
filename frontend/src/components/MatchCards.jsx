@@ -1,7 +1,7 @@
 import { useState } from "react";
 
 function pct(n) {
-  if (n == null || Number.isNaN(Number(n))) return "—";
+  if (n == null || Number.isNaN(Number(n))) return "--";
   return `${Math.round(Number(n) * 100)}%`;
 }
 
@@ -27,7 +27,10 @@ function ConnectRow({ email, linkedinUrl, name }) {
       <div className="gb-match-connect__actions">
         {email && (
           <>
-            <a className="gb-btn gb-btn-primary gb-match-connect__btn" href={`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`GlobalBuddy intro — ${name}`)}`}>
+            <a
+              className="gb-btn gb-btn-primary gb-match-connect__btn"
+              href={`mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Globalदोस्त intro | ${name}`)}`}
+            >
               Email
             </a>
             <button type="button" className="gb-btn gb-btn-secondary gb-match-connect__btn" onClick={copyEmail}>
@@ -52,10 +55,9 @@ export default function MatchCards({ match }) {
   if (!match) {
     return (
       <section className="gb-card" aria-live="polite">
-        <h2 className="gb-card-title--plain">Matches & coverage</h2>
+        <h2 className="gb-card-title--plain">People nearby</h2>
         <p style={{ margin: 0, color: "var(--gb-muted)", fontSize: "0.9rem" }}>
-          Run a graph match to see mentors ranked from Neo4j, peer proximity, and coverage scores derived from your
-          evidence. Contact details come from the graph when mentors and peers opt in (seed/demo data for the hackathon).
+          Switch to Explore mode after profile setup to find mentors and peers from the graph.
         </p>
       </section>
     );
@@ -66,12 +68,10 @@ export default function MatchCards({ match }) {
 
   return (
     <section className="gb-card" aria-live="polite">
-      <h2 className="gb-card-title--plain">Matches & coverage</h2>
+      <h2 className="gb-card-title--plain">People nearby</h2>
       <p style={{ margin: "0 0 1rem", color: "var(--gb-muted)", fontSize: "0.88rem" }}>
-        Top mentors from the graph with deterministic confidence. Support coverage reflects how well resources and
-        mentors align with your stated needs; belonging blends peers, events, food, and mentor links.{" "}
-        <strong style={{ color: "var(--gb-text)", fontWeight: 600 }}>Emails and hints are stored in Neo4j</strong> — in
-        production, only verified members would appear here.
+        Mentors and peers are ranked from graph evidence. Coverage scores summarize how strongly your profile aligns with
+        available support in this city.
       </p>
       <div className="gb-score-row">
         <span>
@@ -95,7 +95,7 @@ export default function MatchCards({ match }) {
                 <div>
                   <div style={{ fontWeight: 600 }}>{m.name}</div>
                   <div style={{ fontSize: "0.8rem", color: "var(--gb-muted)", marginTop: "0.2rem" }}>
-                    {(m.match_reasons || []).join(" · ") || "Graph-ranked match"}
+                    {(m.match_reasons || []).join(" | ") || "Graph-ranked match"}
                   </div>
                 </div>
                 <span className="gb-badge" title="Confidence from graph match score">
@@ -104,12 +104,12 @@ export default function MatchCards({ match }) {
               </div>
               {m.why_this_match && (
                 <p style={{ margin: "0 0 0.75rem", fontSize: "0.88rem", color: "var(--gb-text)", lineHeight: 1.45 }}>
-                  <strong style={{ color: "var(--gb-accent)" }}>Why this match?</strong> {m.why_this_match}
+                  <strong style={{ color: "var(--gb-accent)", fontWeight: 600 }}>Why this match?</strong> {m.why_this_match}
                 </p>
               )}
               {m.connect_hint && (
                 <p className="gb-match-hint">
-                  <strong>How to reach out</strong> — {m.connect_hint}
+                  <strong>How to reach out</strong> | {m.connect_hint}
                 </p>
               )}
               <ConnectRow email={m.email} linkedinUrl={m.linkedin_url} name={m.name} />
@@ -127,13 +127,13 @@ export default function MatchCards({ match }) {
                 <div>
                   <div style={{ fontWeight: 600 }}>{p.name}</div>
                   <div style={{ fontSize: "0.8rem", color: "var(--gb-muted)", marginTop: "0.2rem" }}>
-                    {p.neighborhood} · {p.university}
+                    {p.neighborhood} | {p.university}
                   </div>
                 </div>
               </div>
               {p.connect_hint && (
                 <p className="gb-match-hint">
-                  <strong>How to connect</strong> — {p.connect_hint}
+                  <strong>How to connect</strong> | {p.connect_hint}
                 </p>
               )}
               <ConnectRow email={p.email} linkedinUrl="" name={p.name} />

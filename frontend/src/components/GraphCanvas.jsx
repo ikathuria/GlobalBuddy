@@ -2,7 +2,6 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { DataSet } from "vis-data";
 import { Network } from "vis-network";
 
-/** Single source for vis-network groups + legend swatches */
 const GRAPH_GROUP_STYLES = {
   student: { bg: "#0c4a6e", border: "#38bdf8", label: "You" },
   mentor: { bg: "#0f766e", border: "#2dd4bf", label: "Mentor" },
@@ -45,15 +44,15 @@ const VIS_OPTIONS = {
   },
   layout: { improvedLayout: true },
   groups: Object.fromEntries(
-    Object.entries(GRAPH_GROUP_STYLES).map(([k, v]) => [
-      k,
-      { color: { background: v.bg, border: v.border, highlight: { background: v.bg, border: "#f8fafc" } } },
+    Object.entries(GRAPH_GROUP_STYLES).map(([key, value]) => [
+      key,
+      { color: { background: value.bg, border: value.border, highlight: { background: value.bg, border: "#f8fafc" } } },
     ]),
   ),
 };
 
-function edgeFrom(e) {
-  return e.from ?? e.from_;
+function edgeFrom(edge) {
+  return edge.from ?? edge.from_;
 }
 
 function GraphLegend() {
@@ -69,7 +68,7 @@ function GraphLegend() {
   );
 }
 
-export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId }) {
+export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId, compact = false }) {
   const ref = useRef(null);
   const netRef = useRef(null);
   const roRef = useRef(null);
@@ -92,15 +91,15 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
 
   useEffect(() => {
     if (!expanded) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") setExpanded(false);
+    const onKey = (event) => {
+      if (event.key === "Escape") setExpanded(false);
     };
     window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
+    const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
+      document.body.style.overflow = previousOverflow;
     };
   }, [expanded]);
 
@@ -126,23 +125,24 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
     }
 
     const nds = new DataSet(
-      nodes.map((n) => {
-        const short = n.label.length > 30 ? `${n.label.slice(0, 28)}…` : n.label;
-        const tip = [n.label, n.subtitle].filter(Boolean).join(" — ");
+      nodes.map((node) => {
+        const short = node.label.length > 30 ? `${node.label.slice(0, 28)}...` : node.label;
+        const tip = [node.label, node.subtitle].filter(Boolean).join(" - ");
         return {
-          id: n.id,
+          id: node.id,
           label: short,
-          group: n.group,
+          group: node.group,
           title: tip,
-          borderWidth: selectedNodeId === n.id ? 4 : 2,
+          borderWidth: selectedNodeId === node.id ? 4 : 2,
         };
       }),
     );
+
     const eds = new DataSet(
-      (edges || []).map((e) => ({
-        id: e.id,
-        from: edgeFrom(e),
-        to: e.to,
+      (edges || []).map((edge) => ({
+        id: edge.id,
+        from: edgeFrom(edge),
+        to: edge.to,
       })),
     );
 
@@ -156,12 +156,13 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
     net.on("click", (params) => {
       if (params.nodes.length) {
         const id = params.nodes[0];
-        const full = nodes.find((nx) => nx.id === id);
+        const full = nodes.find((candidate) => candidate.id === id);
         onNodeSelectRef.current?.(full ?? null);
       } else {
         onNodeSelectRef.current?.(null);
       }
     });
+
     net.on("stabilizationIterationsDone", () => {
       fitView();
     });
@@ -184,39 +185,46 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
     };
   }, [nodes, edges, selectedNodeId, fitView]);
 
-  const nCount = nodes?.length ?? 0;
-  const eCount = edges?.length ?? 0;
+  const nodeCount = nodes?.length ?? 0;
+  const edgeCount = edges?.length ?? 0;
+  const innerHeight = expanded ? "min(78vh, 900px)" : compact ? "min(320px, 44vh)" : "min(420px, 52vh)";
 
-  const innerHeight = expanded ? "min(78vh, 900px)" : "min(420px, 52vh)";
+  const showDetailed = !compact || expanded;
+  const title = compact ? "Explore graph" : "Evidence graph";
+  const lede = showDetailed
+    ? "This is the Neo4j evidence slice for your profile: people, places, and tasks returned by the graph."
+    : "Graph view of people, places, and tasks for the selected category.";
 
   const card = (
     <section className={`gb-card gb-graph-card ${expanded ? "gb-graph-card--expanded" : ""}`} aria-label="Evidence graph">
       <div className="gb-graph-card__top">
         <div className="gb-graph-card__intro">
-          <h2 className="gb-graph-card__title">Evidence graph</h2>
-          <p className="gb-graph-card__lede">
-            This is the <strong>Neo4j evidence slice</strong> for your profile: people, places, and tasks returned by the graph.
-            Lines show how you connect to each match; the gray chain is your recommended task order.
-          </p>
-          <ul className="gb-graph-card__tips">
-            <li>
-              <strong>Hover</strong> a node for its full name and subtitle.
-            </li>
-            <li>
-              <strong>Click</strong> a node to open details below (great for judging walkthroughs).
-            </li>
-            <li>
-              <strong>Scroll</strong> to zoom, <strong>drag</strong> the background to pan — or use the corner controls.
-            </li>
-          </ul>
+          <h2 className="gb-graph-card__title">{title}</h2>
+          <p className="gb-graph-card__lede">{lede}</p>
+
+          {showDetailed && (
+            <ul className="gb-graph-card__tips">
+              <li>
+                <strong>Hover</strong> a node for its full name and subtitle.
+              </li>
+              <li>
+                <strong>Click</strong> a node to open details below.
+              </li>
+              <li>
+                <strong>Scroll</strong> to zoom and <strong>drag</strong> to pan.
+              </li>
+            </ul>
+          )}
+
           {hasGraph && (
             <p className="gb-graph-card__meta">
-              <span className="gb-graph-card__stat">{nCount} nodes</span>
-              <span className="gb-graph-card__stat">{eCount} links</span>
-              <span className="gb-graph-card__hint">Grounded in live match results</span>
+              <span className="gb-graph-card__stat">{nodeCount} nodes</span>
+              <span className="gb-graph-card__stat">{edgeCount} links</span>
+              {showDetailed && <span className="gb-graph-card__hint">Grounded in live match results</span>}
             </p>
           )}
         </div>
+
         {hasGraph && (
           <div className="gb-graph-card__actions">
             <button type="button" className="gb-btn gb-btn-secondary gb-graph-card__btn" onClick={fitView}>
@@ -225,19 +233,19 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
             <button
               type="button"
               className="gb-btn gb-btn-primary gb-graph-card__btn"
-              onClick={() => setExpanded((x) => !x)}
+              onClick={() => setExpanded((value) => !value)}
             >
-              {expanded ? "Exit full view" : "Expand for presentation"}
+              {expanded ? "Exit full screen" : compact ? "Full screen graph" : "Expand for presentation"}
             </button>
           </div>
         )}
       </div>
 
-      {hasGraph && <GraphLegend />}
+      {hasGraph && showDetailed && <GraphLegend />}
 
       {!hasGraph ? (
         <div className="gb-graph-wrap gb-graph-placeholder">
-          Run <strong>graph match</strong> on the left to load your evidence subgraph from Neo4j.
+          Run <strong>graph match</strong> in profile setup to load your evidence subgraph from Neo4j.
         </div>
       ) : (
         <div className={`gb-graph-stage ${expanded ? "gb-graph-stage--expanded" : ""}`}>
@@ -253,13 +261,18 @@ export default function GraphCanvas({ nodes, edges, onNodeSelect, selectedNodeId
 
   return (
     <>
-      <button
-        type="button"
+      <div
         className="gb-graph-backdrop"
-        aria-label="Close expanded graph"
-        onClick={() => setExpanded(false)}
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setExpanded(false);
+          }
+        }}
       />
-      <div className="gb-graph-expanded-shell">{card}</div>
+      <div className="gb-graph-expanded-shell" onMouseDown={(event) => event.stopPropagation()}>
+        {card}
+      </div>
     </>
   );
 }

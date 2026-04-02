@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import uuid
 from typing import Any
@@ -22,6 +23,51 @@ from app.models.schemas import (
     Subgraph,
     TransitTipCard,
 )
+
+logger = logging.getLogger(__name__)
+
+
+PERSIST_PROFILE_QUERY = """
+MERGE (session:Session {id: $session_id})
+ON CREATE SET session.created_at = datetime()
+SET
+  session.updated_at = datetime(),
+  session.full_name = $full_name,
+  session.email = $email,
+  session.country_of_origin = $country_of_origin,
+  session.home_city = $home_city,
+  session.target_university = $target_university,
+  session.target_city = $target_city,
+  session.needs = $needs,
+  session.interests = $interests,
+  session.new_to_us = $new_to_us,
+  session.cultural_background = $cultural_background,
+  session.religion_or_observance = $religion_or_observance,
+  session.diet = $diet,
+  session.linkedin_url = $linkedin_url,
+  session.instagram_url = $instagram_url,
+  session.other_social_url = $other_social_url
+MERGE (student:StudentProfile {id: $student_profile_id})
+ON CREATE SET student.created_at = datetime()
+SET
+  student.updated_at = datetime(),
+  student.full_name = $full_name,
+  student.email = $email,
+  student.country_of_origin = $country_of_origin,
+  student.home_city = $home_city,
+  student.target_university = $target_university,
+  student.target_city = $target_city,
+  student.needs = $needs,
+  student.interests = $interests,
+  student.new_to_us = $new_to_us,
+  student.cultural_background = $cultural_background,
+  student.religion_or_observance = $religion_or_observance,
+  student.diet = $diet,
+  student.linkedin_url = $linkedin_url,
+  student.instagram_url = $instagram_url,
+  student.other_social_url = $other_social_url
+MERGE (session)-[:FOR_STUDENT]->(student)
+"""
 
 
 def _country_code_hint(country_name: str) -> str:
@@ -194,6 +240,40 @@ def _transit_rank_score(row: dict[str, Any], tokens: set[str]) -> float:
     if "green" in blob and ("line" in blob or "cta" in blob):
         base += 0.15
     return min(1.0, base)
+
+
+async def _persist_profile_to_db(
+    *,
+    neo4j: Neo4jClient,
+    session_id: str,
+    profile: ProfileMatchRequest,
+    needs: list[str],
+) -> None:
+    try:
+        await neo4j.query_write(
+            PERSIST_PROFILE_QUERY,
+            {
+                "session_id": session_id,
+                "student_profile_id": f"student:{session_id}",
+                "full_name": profile.full_name.strip(),
+                "email": profile.email.strip(),
+                "country_of_origin": profile.country_of_origin.strip(),
+                "home_city": profile.home_city.strip(),
+                "target_university": profile.target_university.strip(),
+                "target_city": profile.target_city.strip(),
+                "needs": needs,
+                "interests": [i.strip() for i in profile.interests if i and i.strip()],
+                "new_to_us": bool(profile.new_to_us),
+                "cultural_background": profile.cultural_background.strip(),
+                "religion_or_observance": profile.religion_or_observance.strip(),
+                "diet": profile.diet.strip(),
+                "linkedin_url": profile.linkedin_url.strip(),
+                "instagram_url": profile.instagram_url.strip(),
+                "other_social_url": profile.other_social_url.strip(),
+            },
+        )
+    except Exception as exc:
+        logger.warning("Unable to persist student profile for session %s: %s", session_id, exc)
 
 
 async def run_profile_match(
@@ -533,16 +613,29 @@ async def run_profile_match(
     tasks_ordered = _topological_tasks([dict(r) for r in task_rows])
 
     student_profile = {
+        "full_name": profile.full_name,
+        "email": profile.email,
         "country_of_origin": country,
         "home_city": profile.home_city,
         "target_university": uni,
         "target_city": city,
         "needs": needs,
         "interests": profile.interests,
+        "new_to_us": bool(profile.new_to_us),
         "cultural_background": profile.cultural_background,
         "religion_or_observance": profile.religion_or_observance,
         "diet": profile.diet,
+        "linkedin_url": profile.linkedin_url,
+        "instagram_url": profile.instagram_url,
+        "other_social_url": profile.other_social_url,
     }
+
+    await _persist_profile_to_db(
+        neo4j=neo4j,
+        session_id=session_id,
+        profile=profile,
+        needs=needs,
+    )
 
     evidence_bundle: dict[str, Any] = {
         "mentors": [m.model_dump() for m in mentors_top3],
@@ -590,12 +683,8 @@ async def run_profile_match(
                 )
             )
 
-    add_node(
-        student_node_id,
-        f"You · {profile.home_city.strip()}",
-        "student",
-        f"{country} → {uni}",
-    )
+    display_name = profile.full_name.strip() or "You"
+    add_node(student_node_id, f"{display_name} · {profile.home_city.strip()}", "student", f"{country} → {uni}")
 
     for m in mentors_top3:
         add_node(m.id, m.name, "mentor", f"score {m.match_score:.2f}")

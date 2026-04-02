@@ -46,6 +46,7 @@ def test_profile_match_endpoint_shape(api_client: object, monkeypatch: pytest.Mo
             "target_city": "Chicago",
             "needs": ["banking"],
             "interests": ["food"],
+            "new_to_us": True,
         },
     )
     assert r.status_code == 200

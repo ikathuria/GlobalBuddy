@@ -1,0 +1,149 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #14223b;
+  background: radial-gradient(circle at top, #eef6ff, #f8fbff 48%, #edf2f8 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100dvh;
+  display: grid;
+  gap: 1rem;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.25rem;
+}
+
+button {
+  width: fit-content;
+  background: #0d5bd8;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  padding: 0.65rem 1rem;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.secondary {
+  background: #1f3356;
+}
+
+.hero,
+.panel {
+  background: #ffffffd9;
+  border: 1px solid #d8e3f2;
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.hero h1 {
+  margin: 0 0 0.35rem;
+}
+
+.hero p {
+  margin: 0;
+}
+
+.panel h2 {
+  margin: 0 0 0.65rem;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.bridge-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+input {
+  border: 1px solid #c5d5ec;
+  border-radius: 8px;
+  padding: 0.6rem 0.75rem;
+}
+
+.inline-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.actions {
+  margin-top: 0.9rem;
+}
+
+.columns {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.columns article {
+  background: #f3f7fe;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.columns h3 {
+  margin: 0 0 0.4rem;
+}
+
+.columns ul,
+.plan-list {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.plan-title {
+  margin: 0 0 0.6rem;
+  font-weight: 700;
+}
+
+.plan-list li {
+  margin-bottom: 0.5rem;
+}
+
+.plan-list p {
+  margin: 0.1rem 0;
+}
+
+.error-text {
+  color: #a62020;
+  margin: 0.45rem 0 0;
+}
+
+.hint {
+  color: #3c4a5e;
+  margin: 0.3rem 0;
+}
+
+@media (max-width: 860px) {
+  .form-grid,
+  .bridge-grid,
+  .columns {
+    grid-template-columns: 1fr;
+  }
+}

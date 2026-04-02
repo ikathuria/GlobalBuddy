@@ -202,6 +202,7 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
         return []
 
     monkeypatch.setattr(Neo4jClient, "query", fake_query)
+    monkeypatch.setattr(Neo4jClient, "query_write", AsyncMock(return_value=[]))
 
     neo4j = Neo4jClient(uri="bolt://x", user="u", password="p")
     profile = ProfileMatchRequest(
@@ -211,6 +212,7 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
         target_city="Chicago",
         needs=["banking", "housing"],
         interests=["south indian food"],
+        new_to_us=True,
         religion_or_observance="Hindu",
         diet="vegetarian",
     )
@@ -225,5 +227,6 @@ async def test_profile_match_result_shape(monkeypatch: pytest.MonkeyPatch) -> No
     assert "places_of_worship" in eb
     assert "grocery_stores" in eb
     assert "transit_tips" in eb
+    assert eb["student_profile"]["new_to_us"] is True
     assert result.places_of_worship and result.places_of_worship[0].name == "Test Temple"
     assert isinstance(result.subgraph.nodes, list)

@@ -10,19 +10,27 @@ from pydantic import BaseModel, Field
 
 # --- Profile match ---
 class ProfileMatchRequest(BaseModel):
+    full_name: str = Field(default="", description="Student full name for profile and outreach context.")
+    email: str = Field(default="", description="Student contact email for profile setup.")
     country_of_origin: str
     home_city: str
     target_university: str
     target_city: str
     needs: list[str]
     interests: list[str] = Field(default_factory=list)
+    new_to_us: bool = Field(
+        default=True,
+        description="Whether the student is newly arriving in the United States.",
+    )
     cultural_background: str = Field(default="", description="Optional; used for deterministic cultural-fit ranking.")
     religion_or_observance: str = Field(
         default="",
         description="Optional; e.g. Hindu, Muslim, Sikh, Christian — matched to graph tags.",
     )
-    diet: str = Field(default="", description="Optional; e.g. vegetarian, halal — matched to graph diet tags.")
-
+    diet: str = Field(default="", description="Optional; e.g. vegetarian, halal - matched to graph diet tags.")
+    linkedin_url: str = Field(default="", description="Optional social profile URL.")
+    instagram_url: str = Field(default="", description="Optional Instagram profile URL or handle.")
+    other_social_url: str = Field(default="", description="Optional additional social profile URL.")
 
 class MentorCard(BaseModel):
     id: str
@@ -216,3 +224,4 @@ class GraphSubgraphResponse(BaseModel):
     nodes: list[GraphNode]
     edges: list[GraphEdge]
     highlights: list[str] = Field(default_factory=list)
+

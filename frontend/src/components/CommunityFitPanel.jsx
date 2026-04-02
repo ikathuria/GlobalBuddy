@@ -20,7 +20,7 @@ function LocalRow({ item, badge }) {
       {item.address && <div className="gb-local-meta">{item.address}</div>}
       {item.why_recommended && (
         <p className="gb-local-why">
-          <strong>Why recommended</strong> — {item.why_recommended}
+          <strong>Why recommended</strong> | {item.why_recommended}
         </p>
       )}
       <div className="gb-local-actions">
@@ -46,7 +46,7 @@ function TransitRow({ t }) {
       {t.summary && <p className="gb-local-why">{t.summary}</p>}
       {t.route_hint && (
         <p className="gb-local-meta" style={{ fontSize: "0.82rem", lineHeight: 1.45 }}>
-          <strong>Route hint</strong> — {t.route_hint}
+          <strong>Route hint</strong> | {t.route_hint}
         </p>
       )}
       {href && (
@@ -70,12 +70,12 @@ function EventRow({ e }) {
       </div>
       <div className="gb-local-meta">
         {e.category}
-        {e.start_time ? ` · ${e.start_time}` : ""}
+        {e.start_time ? ` | ${e.start_time}` : ""}
       </div>
       {e.location && <div className="gb-local-meta">{e.location}</div>}
       {e.notes && (
         <p className="gb-local-why">
-          <strong>Note</strong> — {e.notes}
+          <strong>Note</strong> | {e.notes}
         </p>
       )}
       {href && (
@@ -90,6 +90,18 @@ function EventRow({ e }) {
   );
 }
 
+function ResourceRow({ resource }) {
+  return (
+    <article className="gb-local-card">
+      <div className="gb-local-card__head">
+        <span className="gb-local-badge gb-local-badge--resource">Resource</span>
+        <div className="gb-local-card__title">{resource.name}</div>
+      </div>
+      <div className="gb-local-meta">{resource.resource_type || "General support"}</div>
+    </article>
+  );
+}
+
 export default function CommunityFitPanel({ match }) {
   if (!match) return null;
 
@@ -98,19 +110,24 @@ export default function CommunityFitPanel({ match }) {
   const housing = match.housing_areas || [];
   const explore = match.exploration_spots || [];
   const transit = match.transit_tips || [];
-  const events = (match.community_events || []).filter((e) => e.notes || e.category === "religious_cultural" || e.category === "seasonal_cultural");
+  const resources = match.resources || [];
+  const events = (match.community_events || []).filter(
+    (e) => e.notes || e.category === "religious_cultural" || e.category === "seasonal_cultural",
+  );
 
-  const hasLocal = worship.length + groceries.length + housing.length + explore.length + transit.length > 0;
+  const hasLocal =
+    worship.length + groceries.length + housing.length + explore.length + transit.length + resources.length > 0;
+
   if (!hasLocal && events.length === 0 && !match.best_weekend_outing) {
     return null;
   }
 
   return (
-    <section className="gb-card gb-community" aria-label="Chicago local intelligence">
-      <h2 className="gb-card-title--plain">Feel at home · Chicago</h2>
+    <section className="gb-card gb-community" aria-label="Explore nearby">
+      <h2 className="gb-card-title--plain">Explore mode: nearby in your city</h2>
       <p className="gb-community__lede">
-        Grounded in Neo4j nodes for your city and profile. Dates and routes are not live — use Maps and official sources to
-        confirm.
+        Graph-grounded nearby context for people, events, places, transit, and resources. Dates and routes are not live,
+        so verify with official sources.
       </p>
       {(match.cultural_fit_score != null || match.best_weekend_outing) && (
         <div className="gb-community__scores">
@@ -141,10 +158,21 @@ export default function CommunityFitPanel({ match }) {
 
       {events.length > 0 && (
         <div className="gb-community__block">
-          <h3 className="gb-community__h">Cultural and religious events (verify)</h3>
+          <h3 className="gb-community__h">Cultural and religious events</h3>
           <div className="gb-local-stack">
             {events.map((e) => (
               <EventRow key={e.id} e={e} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {resources.length > 0 && (
+        <div className="gb-community__block">
+          <h3 className="gb-community__h">Resources</h3>
+          <div className="gb-local-stack">
+            {resources.map((resource) => (
+              <ResourceRow key={resource.id} resource={resource} />
             ))}
           </div>
         </div>
