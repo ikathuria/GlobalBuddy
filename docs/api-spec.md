@@ -1,4 +1,4 @@
-﻿# GlobalBuddy API Specification (FastAPI)
+# GlobalBuddy API Specification (FastAPI)
 
 ## 1. API Conventions
 - Base path: `/v1`
@@ -22,10 +22,10 @@ Request:
 {
   "country_of_origin": "India",
   "home_city": "Bengaluru",
-  "target_university": "UT Austin",
-  "target_city": "Austin",
-  "needs": ["banking", "housing"],
-  "interests": ["south indian food", "tech meetups"]
+  "target_university": "Illinois Institute of Technology",
+  "target_city": "Chicago",
+  "needs": ["banking", "housing", "community"],
+  "interests": ["south indian food", "hackathons", "Luma events"]
 }
 ```
 
@@ -60,7 +60,7 @@ Request:
 Response:
 ```json
 {
-  "plan_title": "Your First 30 Days in Austin",
+  "plan_title": "Your First 30 Days in Chicago",
   "steps": [
     {
       "day_range": "Day 1-3",

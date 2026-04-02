@@ -1,13 +1,13 @@
-﻿# GlobalBuddy Demo Runbook
+# GlobalBuddy Demo Runbook
 
 ## 1. Demo Objective
 Show one polished hero journey proving Neo4j + RocketRide are both essential.
 
 ## 2. Hero Scenario
 - Student from India
-- University: UT Austin
-- Needs: banking, housing
-- Interests: South Indian food, community events
+- University: Illinois Institute of Technology (Chicago)
+- Needs: banking, housing, community (Luma / meetups)
+- Interests: South Indian food, HackWithChicago-style events, tech meetups
 
 ## 3. Live Demo Steps (5 minutes)
 1. Submit student profile form.
