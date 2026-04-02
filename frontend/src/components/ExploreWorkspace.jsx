@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import GraphCanvas from "./GraphCanvas.jsx";
 import NodeDetailCard from "./NodeDetailCard.jsx";
 
@@ -16,6 +16,34 @@ function mapsHref(item) {
   const query = (item?.maps_query || item?.address || item?.location || item?.name || "").trim();
   if (!query) return "";
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function contactHref(value, type) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  if (type === "email") {
+    return `mailto:${encodeURIComponent(raw)}`;
+  }
+
+  if (/^https?:\/\//i.test(raw)) {
+    return raw;
+  }
+
+  if (type === "instagram") {
+    const handle = raw.startsWith("@") ? raw.slice(1) : raw;
+    return `https://www.instagram.com/${encodeURIComponent(handle)}`;
+  }
+
+  if (type === "linkedin") {
+    return `https://www.linkedin.com/in/${encodeURIComponent(raw.replace(/^@/, ""))}`;
+  }
+
+  if (type === "phone") {
+    return `tel:${raw.replace(/\s+/g, "")}`;
+  }
+
+  return raw;
 }
 
 function toPct(value) {
@@ -63,6 +91,21 @@ function buildCategoryData(match, plan) {
       mentor.why_this_match ? `Cultural fit: ${mentor.why_this_match}` : null,
       mentor.connect_hint ? `How to reach out: ${mentor.connect_hint}` : null,
     ].filter(Boolean),
+    isPerson: true,
+    profile: {
+      role: "Mentor",
+      email: mentor.email || "",
+      linkedin_url: mentor.linkedin_url || "",
+      instagram_url: mentor.instagram_url || "",
+      other_social_url: mentor.other_social_url || "",
+      phone: mentor.phone || "",
+      languages: mentor.languages || [],
+      match_reasons: mentor.match_reasons || [],
+      trust_score: mentor.trust_score,
+      confidence_score: mentor.confidence_score ?? mentor.match_score,
+      connect_hint: mentor.connect_hint || "",
+      why_this_match: mentor.why_this_match || "",
+    },
     cta: mentor.email ? { label: "Email", href: `mailto:${encodeURIComponent(mentor.email)}` } : null,
   }));
 
@@ -82,6 +125,19 @@ function buildCategoryData(match, plan) {
       peer.connect_hint ? `How to connect: ${peer.connect_hint}` : null,
       peer.university ? `University context: ${peer.university}` : null,
     ].filter(Boolean),
+    isPerson: true,
+    profile: {
+      role: "Peer",
+      email: peer.email || "",
+      linkedin_url: peer.linkedin_url || "",
+      instagram_url: peer.instagram_url || "",
+      other_social_url: peer.other_social_url || "",
+      phone: peer.phone || "",
+      neighborhood: peer.neighborhood || "",
+      university: peer.university || "",
+      connect_hint: peer.connect_hint || "",
+      why_this_match: "Shared destination context can reduce first-week overwhelm.",
+    },
     cta: peer.email ? { label: "Email", href: `mailto:${encodeURIComponent(peer.email)}` } : null,
   }));
 
@@ -270,8 +326,13 @@ function ExploreCard({ item, expanded, onToggle, onFocusNode }) {
           </a>
         )}
 
-        <button type="button" className="gb-link-btn" onClick={onToggle} aria-expanded={expanded}>
-          {expanded ? "Collapse" : "Expand"}
+        <button
+          type="button"
+          className="gb-link-btn"
+          onClick={onToggle}
+          aria-expanded={item.isPerson ? undefined : expanded}
+        >
+          {item.isPerson ? "Expand profile" : expanded ? "Collapse" : "Expand"}
         </button>
       </div>
 
@@ -303,6 +364,120 @@ function ExploreCard({ item, expanded, onToggle, onFocusNode }) {
   );
 }
 
+function PersonProfileModal({ item, onClose }) {
+  useEffect(() => {
+    if (!item) return undefined;
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose?.();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [item, onClose]);
+
+  if (!item?.isPerson || !item?.profile) return null;
+
+  const profile = item.profile;
+  const contactOptions = [
+    { key: "email", label: "Email", href: contactHref(profile.email, "email") },
+    { key: "linkedin", label: "LinkedIn", href: contactHref(profile.linkedin_url, "linkedin") },
+    { key: "instagram", label: "Instagram", href: contactHref(profile.instagram_url, "instagram") },
+    { key: "other", label: "Other Social", href: contactHref(profile.other_social_url, "url") },
+    { key: "phone", label: "Call", href: contactHref(profile.phone, "phone") },
+  ].filter((option) => option.href);
+
+  return (
+    <div
+      className="gb-profile-modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose?.()}
+    >
+      <aside
+        className="gb-profile-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="person-profile-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="gb-profile-modal__head">
+          <div>
+            <p className="gb-profile-modal__eyebrow">{profile.role} profile</p>
+            <h3 id="person-profile-title">{item.title}</h3>
+            {item.subtitle && <p className="gb-profile-modal__subtitle">{item.subtitle}</p>}
+          </div>
+          <button type="button" className="gb-banner__close" onClick={onClose} aria-label="Close profile">
+            x
+          </button>
+        </div>
+
+        <p className="gb-profile-modal__summary">{item.description}</p>
+
+        <div className="gb-profile-modal__grid">
+          {profile.university && (
+            <div className="gb-profile-modal__item">
+              <span>University</span>
+              <strong>{profile.university}</strong>
+            </div>
+          )}
+          {profile.neighborhood && (
+            <div className="gb-profile-modal__item">
+              <span>Neighborhood</span>
+              <strong>{profile.neighborhood}</strong>
+            </div>
+          )}
+          {profile.confidence_score != null && (
+            <div className="gb-profile-modal__item">
+              <span>Match confidence</span>
+              <strong>{toPct(profile.confidence_score)}</strong>
+            </div>
+          )}
+          {profile.trust_score != null && (
+            <div className="gb-profile-modal__item">
+              <span>Trust score</span>
+              <strong>{Number(profile.trust_score).toFixed(2)}</strong>
+            </div>
+          )}
+          {Array.isArray(profile.languages) && profile.languages.length > 0 && (
+            <div className="gb-profile-modal__item gb-profile-modal__item--full">
+              <span>Languages</span>
+              <strong>{profile.languages.join(" | ")}</strong>
+            </div>
+          )}
+          {Array.isArray(profile.match_reasons) && profile.match_reasons.length > 0 && (
+            <div className="gb-profile-modal__item gb-profile-modal__item--full">
+              <span>Why this match</span>
+              <strong>{profile.match_reasons.join(" | ")}</strong>
+            </div>
+          )}
+          {(profile.why_this_match || profile.connect_hint) && (
+            <div className="gb-profile-modal__item gb-profile-modal__item--full">
+              <span>Guidance</span>
+              <strong>{profile.why_this_match || profile.connect_hint}</strong>
+            </div>
+          )}
+        </div>
+
+        <div className="gb-profile-modal__actions">
+          {contactOptions.length > 0 ? (
+            contactOptions.map((option) => (
+              <a
+                key={`${item.cardId}-${option.key}`}
+                className="gb-btn gb-btn-primary"
+                href={option.href}
+                target={option.key === "email" || option.key === "phone" ? undefined : "_blank"}
+                rel={option.key === "email" || option.key === "phone" ? undefined : "noopener noreferrer"}
+              >
+                {option.label}
+              </a>
+            ))
+          ) : (
+            <span className="gb-profile-modal__no-contacts">No contact details shared yet.</span>
+          )}
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 export default function ExploreWorkspace({
   match,
   plan,
@@ -314,9 +489,16 @@ export default function ExploreWorkspace({
   onPathChange,
 }) {
   const [expandedId, setExpandedId] = useState(null);
+  const [activePerson, setActivePerson] = useState(null);
   const categoryData = useMemo(() => buildCategoryData(match, plan), [match, plan]);
   const activeCategory = categoryData[category] ? category : "people";
   const active = categoryData[activeCategory];
+
+  useEffect(() => {
+    if (activeCategory !== "people") {
+      setActivePerson(null);
+    }
+  }, [activeCategory]);
 
   const nodeMap = useMemo(() => {
     return new Map((match?.subgraph?.nodes || []).map((node) => [node.id, node]));
@@ -347,6 +529,7 @@ export default function ExploreWorkspace({
               onClick={() => {
                 onCategoryChange(option.id);
                 setExpandedId(null);
+                setActivePerson(null);
               }}
             >
               {option.label}
@@ -367,8 +550,14 @@ export default function ExploreWorkspace({
               <ExploreCard
                 key={cardKey}
                 item={item}
-                expanded={expandedId === cardKey}
-                onToggle={() => setExpandedId((prev) => (prev === cardKey ? null : cardKey))}
+                expanded={item.isPerson ? false : expandedId === cardKey}
+                onToggle={() => {
+                  if (item.isPerson) {
+                    setActivePerson(item);
+                    return;
+                  }
+                  setExpandedId((prev) => (prev === cardKey ? null : cardKey));
+                }}
                 onFocusNode={focusNode}
               />
               );
@@ -403,6 +592,7 @@ export default function ExploreWorkspace({
           )}
         </aside>
       </section>
+      <PersonProfileModal item={activePerson} onClose={() => setActivePerson(null)} />
     </div>
   );
 }

@@ -1401,6 +1401,113 @@ a {
   font-family: var(--gb-font-display);
 }
 
+.gb-profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 95;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(4px);
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.gb-profile-modal {
+  width: min(640px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  border-radius: var(--gb-radius);
+  border: 1px solid var(--gb-border);
+  background: var(--gb-surface-strong);
+  box-shadow: 0 26px 60px rgba(15, 23, 42, 0.25);
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.gb-profile-modal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.7rem;
+}
+
+.gb-profile-modal__eyebrow {
+  margin: 0;
+  color: var(--gb-muted);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 800;
+}
+
+.gb-profile-modal h3 {
+  margin: 0.2rem 0 0;
+  font-family: var(--gb-font-display);
+  font-size: 1.16rem;
+}
+
+.gb-profile-modal__subtitle {
+  margin: 0.28rem 0 0;
+  font-size: 0.84rem;
+  color: var(--gb-muted);
+}
+
+.gb-profile-modal__summary {
+  margin: 0;
+  color: var(--gb-muted);
+}
+
+.gb-profile-modal__grid {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gb-profile-modal__item {
+  border: 1px solid var(--gb-border);
+  border-radius: 10px;
+  padding: 0.56rem 0.62rem;
+  background: rgba(255, 255, 255, 0.78);
+  display: grid;
+  gap: 0.2rem;
+}
+
+.gb-profile-modal__item--full {
+  grid-column: 1 / -1;
+}
+
+.gb-profile-modal__item span {
+  color: var(--gb-muted);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+}
+
+.gb-profile-modal__item strong {
+  font-size: 0.89rem;
+  line-height: 1.4;
+  color: var(--gb-ink);
+  font-weight: 700;
+}
+
+.gb-profile-modal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.gb-profile-modal__actions .gb-btn {
+  padding: 0.5rem 0.84rem;
+}
+
+.gb-profile-modal__no-contacts {
+  color: var(--gb-muted);
+  font-size: 0.86rem;
+}
+
 .gb-error {
   border-radius: 10px;
   border: 1px solid rgba(185, 28, 28, 0.24);
@@ -1461,5 +1568,9 @@ a {
 
   .gb-nav-right {
     width: 100%;
+  }
+
+  .gb-profile-modal__grid {
+    grid-template-columns: 1fr;
   }
 }
