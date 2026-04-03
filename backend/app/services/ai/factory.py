@@ -1,4 +1,4 @@
-"""Resolve AI provider from settings — priority: explicit AI_PROVIDER > Gemini > RocketRide HTTP > Anthropic."""
+"""Resolve AI provider from settings — priority: explicit AI_PROVIDER > Gemini > RocketRide SDK > RocketRide HTTP > Anthropic."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from app.config import Settings
 from app.services.ai.anthropic_http_provider import AnthropicHttpProvider
 from app.services.ai.gemini_provider import GeminiProvider
 from app.services.ai.http_rocketride_provider import HttpRocketRideProvider
+from app.services.ai.rocketride_sdk_provider import RocketRideSdkProvider
 
 if TYPE_CHECKING:
     from app.services.ai.protocol import AIProvider
@@ -23,6 +24,15 @@ def get_ai_provider(settings: Settings) -> "AIProvider":
         if not settings.gemini_api_key.strip():
             raise ValueError("AI_PROVIDER=gemini requires GEMINI_API_KEY")
         return GeminiProvider(settings)
+
+    if mode == "rocketride_sdk" or (
+        mode == "auto"
+        and settings.rocketride_uri.strip()
+        and settings.rocketride_apikey.strip()
+    ):
+        if not settings.rocketride_uri.strip():
+            raise ValueError("rocketride_sdk requires ROCKETRIDE_URI")
+        return RocketRideSdkProvider(settings)
 
     if mode == "rocketride_http" or (
         mode == "auto"
@@ -40,6 +50,7 @@ def get_ai_provider(settings: Settings) -> "AIProvider":
 
     raise ValueError(
         "No AI provider configured. Set GEMINI_API_KEY (+ optional AI_PROVIDER=gemini), "
+        "or ROCKETRIDE_URI + ROCKETRIDE_APIKEY, "
         "or ROCKETRIDE_HTTP_COMPLETION_URL + ROCKETRIDE_APIKEY, "
         "or ANTHROPIC_API_KEY."
     )

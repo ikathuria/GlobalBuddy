@@ -65,3 +65,4 @@ Thumbs.db
 
 # VS Code (optional: uncomment to ignore all local VS Code settings)
 # .vscode/
+.rocketride/

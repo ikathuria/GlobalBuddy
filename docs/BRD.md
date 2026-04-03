@@ -1,68 +1,60 @@
-﻿# GlobalBuddy Business Requirements Document (BRD)
+﻿# Globalदोस्त Business Requirements Document (BRD)
 
-## 1. Product Vision
-GlobalBuddy helps international students navigate their first 30 days in a new US city with personalized, graph-grounded guidance.
+## 1. Product vision
+Globalदोस्त helps international students settle into a US city with a calm, practical, graph-grounded onboarding journey.
 
 Motto: "You didn't come this far to figure it out alone."
 
-## 2. Problem Statement
-International students face high-friction first-week tasks with low context:
-- They do not know which action comes first.
-- They do not know who to trust.
-- They do not know where to find culturally familiar support.
+## 2. Problem statement
+International students often face first-month friction:
+- unclear task order (what to do first)
+- weak trust signals (who to ask)
+- low local context (where to go for familiar support)
 
-This causes avoidable stress, delays, and costly mistakes.
+## 3. Target users
+- Primary: international students new to a US city
+- Secondary: returning US-based international students who still need local support discovery
+- Internal: demo/review stakeholders evaluating product readiness
 
-## 3. Target Users
-- Primary: New international students in US universities.
-- Secondary: Existing student mentors.
-- Tertiary: Hackathon judges and reviewers evaluating the prototype.
+## 4. Business goals
+- Reduce first-month uncertainty with sequence-aware guidance.
+- Improve trust via graph-ranked mentors and peers.
+- Improve belonging with local context (worship, groceries, housing, exploration, transit, events).
+- Maintain a polished, demo-ready experience with transparent fallback behavior.
 
-## 4. Business Goals
-- Reduce first-month uncertainty with a concrete action plan.
-- Increase trust by linking students to relevant mentors and peers.
-- Improve belonging through cultural comfort recommendations (food and events).
-- Demonstrate deep Neo4j + RocketRide integration for hackathon criteria.
+## 5. Value proposition
+Globalदोस्त combines:
+- Neo4j relationship intelligence for deterministic matching and explainable graph context.
+- AI plan synthesis for warm, practical next steps linked to evidence nodes.
 
-## 5. Value Proposition
-GlobalBuddy combines:
-- Neo4j relationship intelligence to discover trusted, relevant connections.
-- RocketRide AI reasoning to convert graph evidence into ordered next steps.
+Output is not generic advice; it is contextual, ordered, and traceable to known entities.
 
-Output is not generic tips. Output is a named, local, ordered survival plan.
+## 6. Success metrics (current release)
+- User completes Step 1 and receives session-backed recommendations end-to-end.
+- Step 2 generates plan with `best_next_action`, ordered steps, and provider metadata.
+- Cultural Bridge returns usable explanation and action list for a term.
+- Step 3 supports category exploration and graph-node drill-down.
+- Health panel clearly communicates API/Neo4j availability.
 
-## 6. Success Metrics (Hackathon MVP)
-- A student can submit profile input and receive results end-to-end.
-- Top 3 mentor recommendations include clear match reasons.
-- Nearby peers, cultural restaurants, and upcoming events are returned.
-- A graph view renders links from student to matched entities.
-- The final 30-day plan references actual names/places from graph data.
-- Judges can clearly see Neo4j and RocketRide as central to the workflow.
+## 7. In scope
+- Guided 3-step UI: Profile, AI Plan, Explore Graph.
+- Returning-user shortcut: skip plan when `new_to_us=false`.
+- Maps handoff and preview for local places/events.
+- Multi-provider AI backend with deterministic fallback.
 
-## 7. In Scope (MVP)
-- One polished hero journey (India student -> US university).
-- Core needs: banking, housing, visa/admin setup.
-- Three core agents:
-  - Profile and Match Agent
-  - Judge Agent
-  - Cultural Bridge Agent
-- React command center with live graph and recommendation panels.
+## 8. Out of scope
+- Full account/authentication lifecycle.
+- Persistent cross-device plan completion state.
+- Live events calendar guarantees.
+- Nationwide production-scale data completeness.
 
-## 8. Out of Scope (MVP)
-- Full production onboarding and account management.
-- High-scale multi-tenant architecture.
-- Complete legal advice coverage for all visa classes.
-- Nationwide data completeness for all US cities.
+## 9. Risks and mitigations
+- Sparse city data.
+  - Mitigation: seeded city-local graph lists and resource fallback.
+- AI provider instability/timeouts.
+  - Mitigation: provider abstraction + deterministic fallback payloads.
+- User over-trust of non-live data.
+  - Mitigation: explicit verification guidance in UI copy and notes.
 
-## 9. Risks and Mitigations
-- Sparse data in some cities.
-  - Mitigation: curated seed pack and deterministic demo scenario.
-- Hallucinated AI output.
-  - Mitigation: evidence-only prompt policy with entity citation.
-- Inconsistent recommendation quality.
-  - Mitigation: explicit scoring policy and deterministic ranking fields.
-
-## 10. Hackathon Requirement Alignment
-- Neo4j as primary database: yes, all matching and dependency logic are graph-backed.
-- RocketRide as core intelligent feature: yes, plan generation and cultural explanation rely on it.
-- Deep integration: yes, RocketRide consumes structured evidence produced by Neo4j queries.
+## 10. Branding
+- Product-facing name: **Globalदोस्त**.

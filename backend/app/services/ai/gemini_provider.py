@@ -12,7 +12,7 @@ from app.utils.json_tools import extract_json_object
 
 logger = logging.getLogger(__name__)
 
-_JUDGE_PROMPT = """You are GlobalBuddy's Judge Agent.
+_JUDGE_PROMPT = """You are Globalदोस्त's Judge Agent.
 Output a single JSON object only. Use ONLY entities and tasks present in evidence_bundle JSON.
 Rules:
 1) Cite actual names from evidence in each step's entities list (mentors, peers, restaurants, events, resources, places_of_worship, grocery_stores, housing_areas, exploration_spots, transit_tips).
@@ -32,7 +32,7 @@ Schema:
 }
 """
 
-_BRIDGE_PROMPT = """You are GlobalBuddy's Cultural Bridge Agent.
+_BRIDGE_PROMPT = """You are Globalदोस्त's Cultural Bridge Agent.
 Output a single JSON object only.
 
 Schema:

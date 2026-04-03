@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 
-const STORAGE_KEY = "globalbuddy_student_profile_v1";
+const STORAGE_KEY = "globaldost_student_profile_v1";
 
 /**
- * Lightweight local “join” for the hackathon demo — not a full auth system.
- * Saves name + email in localStorage so you can narrate “students opt in, then we match from the graph.”
+ * Lightweight local "join" for the hackathon demo - not a full auth system.
+ * Saves name + email in localStorage so you can narrate "students opt in, then we match from the graph."
  * Production would use accounts + verified emails in Neo4j.
  */
 export default function CommunitySignup() {
@@ -54,8 +54,8 @@ export default function CommunitySignup() {
       <h2 className="gb-card-title--plain">Join your cohort (demo)</h2>
       <p style={{ margin: "0 0 1rem", color: "var(--gb-muted)", fontSize: "0.88rem", lineHeight: 1.5 }}>
         Full registration and verified profiles would live in the product backend. For this build, save your name and
-        email <strong style={{ color: "var(--gb-text)" }}>locally in this browser</strong> to simulate “I’m on the
-        platform” before you run a graph match. Later, the same fields would sync to Postgres + Neo4j after email
+        email <strong style={{ color: "var(--gb-text)" }}>locally in this browser</strong> to simulate "I'm on the
+        platform" before you run a graph match. Later, the same fields would sync to Postgres + Neo4j after email
         verification.
       </p>
       {saved ? (

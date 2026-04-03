@@ -11,8 +11,8 @@
       },
       "ui": {
         "position": {
-          "x": 690,
-          "y": 270
+          "x": 870,
+          "y": 465
         },
         "measured": {
           "width": 150,
@@ -23,12 +23,12 @@
       }
     },
     {
-      "id": "llm_openai_1",
-      "provider": "llm_openai",
+      "id": "llm_gemini_1",
+      "provider": "llm_gemini",
       "config": {
-        "profile": "openai-5",
-        "openai-5": {
-          "apikey": "${ROCKETRIDE_OPENAI_KEY}"
+        "profile": "gemini-2_0-flash",
+        "gemini-2_0-flash": {
+          "apikey": "${ROCKETRIDE_GEMINI_KEY}"
         }
       },
       "input": [
@@ -39,8 +39,8 @@
       ],
       "ui": {
         "position": {
-          "x": 945,
-          "y": 270
+          "x": 1125,
+          "y": 465
         },
         "measured": {
           "width": 150,
@@ -59,13 +59,13 @@
       "input": [
         {
           "lane": "answers",
-          "from": "llm_openai_1"
+          "from": "llm_gemini_1"
         }
       ],
       "ui": {
         "position": {
-          "x": 1215,
-          "y": 270
+          "x": 1395,
+          "y": 465
         },
         "measured": {
           "width": 150,
@@ -78,11 +78,11 @@
   ],
   "source": "chat_1",
   "viewport": {
-    "x": -877,
-    "y": -260,
+    "x": -1237,
+    "y": -650,
     "zoom": 2
   },
-  "project_id": "9bb924c6-c689-472a-8150-32e9d18fd832",
+  "project_id": "896c3ad0-2bca-4193-9c20-fb4f59433c12",
   "version": 1,
   "docRevision": 1
 }

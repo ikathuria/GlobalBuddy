@@ -20,7 +20,7 @@ def _mentor_rows() -> list[dict]:
             "languages": ["English", "Hindi"],
             "email": "ananya@example.test",
             "linkedin_url": "",
-            "connect_hint": "Say GlobalBuddy in the subject.",
+            "connect_hint": "Say Globalदोस्त in the subject.",
             "covered": ["banking", "housing"],
         }
     ]

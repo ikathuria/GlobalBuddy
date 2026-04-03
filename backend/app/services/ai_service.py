@@ -121,7 +121,7 @@ class AiService:
         profile = json.dumps(payload.student_profile, ensure_ascii=True, sort_keys=True)
         evidence = json.dumps(payload.evidence_bundle, ensure_ascii=True, sort_keys=True)
         return (
-            "You are the GlobalBuddy Judge Agent.\n"
+            "You are the Globalदोस्त Judge Agent.\n"
             "Return ONLY JSON that matches the given schema.\n"
             "Requirements:\n"
             "- Use only entities present in evidence_bundle.\n"
@@ -135,7 +135,7 @@ class AiService:
 
     def _build_bridge_prompt(self, payload: BridgeExplainRequest) -> str:
         return (
-            "You are the GlobalBuddy Cultural Bridge Agent.\n"
+            "You are the Globalदोस्त Cultural Bridge Agent.\n"
             "Return ONLY JSON that matches the given schema.\n"
             "Requirements:\n"
             "- Explain in plain language for a newly arrived international student.\n"

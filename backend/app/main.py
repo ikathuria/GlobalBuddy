@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="GlobalBuddy API", version="0.1.0", lifespan=lifespan)
+    app = FastAPI(title="Globalदोस्त API", version="0.1.0", lifespan=lifespan)
 
     # Regex covers localhost / 127.0.0.1 / [::1] with any port (browser Origin must match for CORS).
     _local_origin_regex = r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?"

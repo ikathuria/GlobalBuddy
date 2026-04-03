@@ -32,16 +32,16 @@ SET m1.name = 'Ananya Sharma',
     m1.response_rate = 0.88,
     m1.languages = ['English', 'Hindi', 'Kannada'],
     m1.country_code = 'IN',
-    m1.email = 'ananya.sharma.mentor@globalbuddy.demo',
+    m1.email = 'ananya.sharma.mentor@globaldost.demo',
     m1.linkedin_url = 'https://www.linkedin.com/in/example-ananya-sharma',
-    m1.connect_hint = 'Mention GlobalBuddy + IIT OIA ambassador intro in your subject line.';
+    m1.connect_hint = 'Mention Globalदोस्त + IIT OIA ambassador intro in your subject line.';
 MERGE (m2:Mentor {id: 'mentor_rajesh_kumar'})
 SET m2.name = 'Rajesh Kumar',
     m2.trust_score = 0.87,
     m2.response_rate = 0.82,
     m2.languages = ['English', 'Hindi', 'Tamil'],
     m2.country_code = 'IN',
-    m2.email = 'rajesh.kumar.mentor@globalbuddy.demo',
+    m2.email = 'rajesh.kumar.mentor@globaldost.demo',
     m2.linkedin_url = '',
     m2.connect_hint = 'Available for 20-min Zoom — book via IIT international student Slack (demo).';
 
@@ -51,7 +51,7 @@ SET peer.name = 'Alex Kim',
     peer.university = 'Illinois Institute of Technology',
     peer.neighborhood = 'South Loop',
     peer.email = 'akim3@hawk.iit.edu',
-    peer.connect_hint = 'Say you matched on GlobalBuddy; happy to grab coffee near campus.';
+    peer.connect_hint = 'Say you matched on Globalदोस्त; happy to grab coffee near campus.';
 
 // Restaurants — Chicago / Devon Ave corridor (South Asian food)
 MERGE (r1:Restaurant {id: 'rest_devon_kitchen'})

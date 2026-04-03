@@ -1,71 +1,64 @@
-﻿# GlobalBuddy Neo4j Data Model
+﻿# Globalदोस्त Neo4j Data Model
 
-## 1. Node Labels
-- Student
-- Mentor
-- Peer
-- University
-- Country
-- City
-- Neighborhood
-- Need
-- Task
-- Resource
-- Restaurant
-- Event
-- CulturalGroup
+## 1. Primary node labels
+- `Session`
+- `StudentProfile`
+- `Mentor`
+- `Peer`
+- `University`
+- `Country`
+- `City`
+- `Need`
+- `Task`
+- `Resource`
+- `Restaurant`
+- `Event`
+- `PlaceOfWorship`
+- `GroceryStore`
+- `HousingArea`
+- `ExplorationSpot`
+- `TransitTip`
 
-## 2. Relationship Types
-- (:Student)-[:FROM_COUNTRY]->(:Country)
-- (:Student)-[:STUDIES_AT]->(:University)
-- (:Student)-[:NEEDS_HELP_WITH]->(:Need)
-- (:Mentor)-[:ALUM_OF]->(:University)
-- (:Mentor)-[:FROM_COUNTRY]->(:Country)
-- (:Mentor)-[:CAN_HELP_WITH]->(:Need)
-- (:Peer)-[:STUDIES_AT]->(:University)
-- (:Peer)-[:LIVES_NEAR]->(:Neighborhood)
-- (:Restaurant)-[:SERVES_CUISINE]->(:Country)
-- (:Event)-[:RELEVANT_TO]->(:Country)
-- (:Event)-[:OCCURS_IN]->(:City)
-- (:Resource)-[:HELPS_WITH]->(:Need)
-- (:Task)-[:PRECEDES]->(:Task)
+## 2. Core relationship patterns
+- `(:Session)-[:FOR_STUDENT]->(:StudentProfile)`
+- `(:Mentor)-[:FROM_COUNTRY]->(:Country)`
+- `(:Mentor)-[:ALUM_OF]->(:University)`
+- `(:Mentor)-[:CAN_HELP_WITH]->(:Need)`
+- `(:Peer)-[:STUDIES_AT]->(:University)`
+- `(:Restaurant)-[:SERVES_CUISINE]->(:Country)`
+- `(:Event)-[:RELEVANT_TO]->(:Country)`
+- `(:Event)-[:OCCURS_IN]->(:City)`
+- `(:Resource)-[:HELPS_WITH]->(:Need)`
+- `(:Task)-[:PRECEDES]->(:Task)`
+- `(:HousingArea)-[:NEAR_UNIVERSITY]->(:University)`
+- `(:ExplorationSpot)-[:LOCATED_IN]->(:City)`
+- `(:TransitTip)-[:GOOD_FOR]->(:City)`
+- `(:PlaceOfWorship)-[:RELEVANT_TO]->(:Country)` (optional)
+- `(:GroceryStore)-[:RELEVANT_TO]->(:Country)` (optional)
 
-## 3. Key Properties
-- Mentor: `id`, `name`, `trust_score`, `response_rate`, `languages`
-- Peer: `id`, `name`, `university`, `neighborhood`
-- Restaurant: `id`, `name`, `price_level`, `distance_km`
-- Event: `id`, `name`, `start_time`, `location`, `category`
-- Task: `id`, `name`, `priority`, `estimated_day_window`
+## 3. Key property highlights
+- `Mentor`: `id`, `name`, `trust_score`, `languages`, `email`, `connect_hint`
+- `Peer`: `id`, `name`, `university`, `neighborhood`, `email`, `connect_hint`
+- `Event`: `id`, `name`, `category`, `start_time`, `location`, `notes`, `maps_query`, `maps_link`
+- `Task`: `id`, `name`, `priority`, `estimated_day_window`
+- Local place labels (`PlaceOfWorship`, `GroceryStore`, `HousingArea`, `ExplorationSpot`):
+  - `id`, `name`, `address`, `neighborhood`, `maps_query`, `maps_link`, optional tag arrays
+- `TransitTip`: `id`, `name`, `summary`, `route_hint`, `maps_link`
 
-## 4. Constraints and Indexes (MVP)
-```cypher
-CREATE CONSTRAINT student_id IF NOT EXISTS FOR (n:Student) REQUIRE n.id IS UNIQUE;
-CREATE CONSTRAINT mentor_id IF NOT EXISTS FOR (n:Mentor) REQUIRE n.id IS UNIQUE;
-CREATE CONSTRAINT peer_id IF NOT EXISTS FOR (n:Peer) REQUIRE n.id IS UNIQUE;
-CREATE CONSTRAINT task_id IF NOT EXISTS FOR (n:Task) REQUIRE n.id IS UNIQUE;
-CREATE INDEX mentor_country IF NOT EXISTS FOR (n:Mentor) ON (n.country_code);
-CREATE INDEX event_time IF NOT EXISTS FOR (n:Event) ON (n.start_time);
-```
+## 4. Ranking and scoring inputs
+- Mentor ranking: shared country, shared university, need overlap, trust score.
+- Local-fit ranking: profile token overlap against place/event tags.
+- Aggregated API scores:
+  - `support_coverage_score`
+  - `belonging_score`
+  - `cultural_fit_score`
 
-## 5. Ranking Inputs
-Mentor ranking score uses weighted fields:
-- Shared country match
-- Shared university match
-- Need coverage overlap
-- Trust score
-- Distance or accessibility
+## 5. Task dependency layer
+Task ordering is encoded via `Task-[:PRECEDES]->Task` and transformed into ordered output for plan generation.
 
-## 6. Task Dependency Layer
-Use `Task-[:PRECEDES]->Task` to enforce ordering.
-- Example chain:
-  - Identity and documentation readiness
-  - Banking setup
-  - Rental commitment actions
-
-## 7. Seed Data Guidance
-Use curated synthetic+realistic data for deterministic demo quality:
-- 1 hero university + 2 secondary universities
-- 5 source countries
-- 40 to 60 mentors/peers combined
-- 20 to 40 events
-- 20 to 40 restaurants/resources
+## 6. Seed guidance
+Seed scripts should keep deterministic demo quality with:
+- mentor and peer coverage for at least one hero university-city path
+- task chain with clear prerequisite links
+- local context entities with map query/link metadata
+- event/resource notes that avoid claiming live schedule guarantees

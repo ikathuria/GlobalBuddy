@@ -1,70 +1,93 @@
-# GlobalBuddy
+﻿# Globalदोस्त
 
-GlobalBuddy is a graph-powered support platform for international students. **Neo4j AuraDB** is the source of truth for students, mentors, peers, tasks, resources, restaurants, and events. An **AI provider layer** turns graph evidence into a structured first-30-days plan and cultural-term explanations. The default implementation uses **Google Gemini** via environment variables; the same interface can host **RocketRide** or other providers later without rewriting the app.
+Globalदोस्त is a graph-powered support platform for international students arriving in US cities. The current product experience is a guided 3-step journey that turns profile context plus Neo4j evidence into practical next actions.
 
-Motto: *You didn’t come this far to figure it out alone.*
+Motto: *You didn't come this far to figure it out alone.*
 
-## What this repo contains
+## What is live now
 
-- **Documentation** in `docs/` (BRD, SRS, architecture, API, agents, prompts, demo runbook).
-- **Backend** — FastAPI, Neo4j access, `/v1` routers, provider-based AI (`backend/app/services/ai/`).
-- **Frontend** — Vite + React command center: profile match, vis-network graph, plan generation, cultural bridge drawer.
-- **Seed data** — `data/seed/*.cypher` (MERGE-only) including the Priya demo path (Chicago / Illinois Institute of Technology, HackWithChicago 3.0, Luma, IIT OIA) plus **`chicago_belonging.cypher`**: places of worship, groceries, housing clusters near IIT, downtown exploration spots, transit tips, and curated cultural/religious **Event** nodes with explicit “verify dates” notes (not live calendars).
+- **Step 1 - Profile setup wizard**
+  - 3 sections: Personal Info, Origin and Context, Destination.
+  - Smart starter defaults for a faster demo path.
+  - Supports optional cultural context fields (`cultural_background`, `religion_or_observance`, `diet`) and social handles.
+  - `new_to_us=false` is used to skip the plan step in the UI.
 
-## Architecture (vertical slice)
+- **Step 2 - AI Plan (first 30 days)**
+  - Calls `POST /v1/plan/generate` with session-backed evidence.
+  - Week-grouped timeline, best next action, warning surface, and provider/fallback metadata.
+  - Task completion is persisted per session in browser local storage.
+  - Each plan step can focus related graph nodes.
 
-1. Student submits profile → `POST /v1/profile/match` queries Neo4j, ranks mentors, returns **Chicago local intelligence** lists (worship, groceries, housing, exploration, transit) with deterministic tag overlap vs optional profile fields (`religion_or_observance`, `diet`, `cultural_background`, `interests`), builds **evidence bundle** + **subgraph**, stores session.
-2. `POST /v1/plan/generate` loads evidence from the session (or request body), calls the **Judge** path through `get_ai_provider(settings)` → **Gemini** when `GEMINI_API_KEY` is set (`AI_PROVIDER=gemini` or `auto`).
-3. `POST /v1/bridge/explain` runs the **Cultural Bridge** path through the same provider abstraction with structured JSON output and deterministic fallback on failure.
-4. `GET /v1/graph/subgraph?session_id=…` returns the stored subgraph for vis-network.
+- **Step 3 - Explore Graph**
+  - Category views: People, Events, Food, Housing, Tasks.
+  - Person profile modal with one-click contact links (email/LinkedIn/Instagram/phone when available).
+  - vis-network graph with filter chips, path highlighting, shortest-path breadcrumb, and fit/expand controls.
+  - Node detail panel supports direct Maps open plus embedded map preview.
+
+- **Cultural Bridge drawer**
+  - Calls `POST /v1/bridge/explain` from custom term input or quick chips (`security deposit`, `credit score`, `SSN`).
+  - Returns plain explanation, home-context analogy, common mistakes, and next actions.
+
+- **System status checks**
+  - UI probes `GET /health` and `GET /health/neo4j`.
+  - Shows API live/offline state and Neo4j node count with retry.
+
+## Backend stack
+
+- FastAPI (`backend/app`)
+- Neo4j AuraDB as source of truth for graph evidence
+- AI provider abstraction:
+  - `gemini` (default-recommended)
+  - `rocketride_sdk`
+  - `rocketride_http` (legacy compatibility)
+  - `anthropic`
+  - deterministic fallback when generation fails
+
+## API surface
+
+- `POST /v1/profile/match`
+- `POST /v1/plan/generate`
+- `POST /v1/bridge/explain`
+- `GET /v1/graph/subgraph?session_id=...`
+- `GET /health`
+- `GET /health/neo4j`
 
 ## Environment variables
 
-Copy `backend/.env.example` → `backend/.env` and fill:
+Copy `backend/.env.example` to `backend/.env`.
 
 | Variable | Purpose |
-|----------|---------|
-| `NEO4J_URI` | Aura URI (`neo4j+s://…`) |
+|---|---|
+| `NEO4J_URI` | Aura URI (`neo4j+s://...`) |
 | `NEO4J_USER` | Neo4j user |
 | `NEO4J_PASSWORD` | Neo4j password |
-| `GEMINI_API_KEY` | Google AI Studio / Gemini API key (recommended for demos) |
-| `GEMINI_MODEL` | Model id (default in app: `gemini-2.0-flash`) |
-| `AI_PROVIDER` | `gemini`, `rocketride_http`, `anthropic_httpx`, or `auto` (prefers Gemini when key present) |
-| `ROCKETRIDE_URI` | RocketRide base (e.g. `wss://cloud.rocketride.ai`) — optional |
-| `ROCKETRIDE_APIKEY` | Bearer token for RocketRide HTTP |
-| `ROCKETRIDE_HTTP_COMPLETION_URL` | Full URL for RocketRide HTTP JSON completion (optional swap-in) |
-| `ANTHROPIC_API_KEY` | Optional alternative LLM path |
-| `CORS_ORIGINS` | Comma-separated origins (include `http://localhost:5173`) |
+| `AI_PROVIDER` | `auto`, `gemini`, `rocketride_sdk`, `rocketride_http`, `anthropic` |
+| `GEMINI_API_KEY` | Gemini key (recommended path) |
+| `GEMINI_MODEL` | Gemini model id (default `gemini-2.0-flash`) |
+| `ROCKETRIDE_URI` | RocketRide base URI |
+| `ROCKETRIDE_APIKEY` | RocketRide API key |
+| `ROCKETRIDE_GEMINI_KEY` | Gemini key passed to RocketRide pipelines |
+| `ROCKETRIDE_PLAN_PIPELINE` | Plan pipeline path |
+| `ROCKETRIDE_BRIDGE_PIPELINE` | Bridge pipeline path |
+| `ROCKETRIDE_HTTP_COMPLETION_URL` | Legacy RocketRide HTTP completion URL |
+| `ANTHROPIC_API_KEY` | Anthropic key |
+| `CORS_ORIGINS` | Comma-separated allowed origins |
 
-**Gemini setup:** create an API key in [Google AI Studio](https://aistudio.google.com/), set `GEMINI_API_KEY` and `GEMINI_MODEL`, and use `AI_PROVIDER=gemini` (or `auto` with Gemini key present). Do not commit secrets.
+Validation rule: at least one provider path must be configured (`GEMINI_API_KEY`, RocketRide SDK pair, RocketRide HTTP pair, or `ANTHROPIC_API_KEY`).
 
-**Validation:** at least one of Gemini, RocketRide HTTP pair, or Anthropic must be configured so the app can start.
+## Local setup
 
-## Setup — backend
+### 1) Backend
 
 ```bash
 cd backend
-python3 -m venv .venv
+python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edit `.env` with Neo4j and Gemini (or another provider).
-
-### Seed Neo4j (run after DB is empty or idempotent re-run)
-
-Seeding only needs **`NEO4J_URI`**, **`NEO4J_USER`**, **`NEO4J_PASSWORD`**. You do not need an LLM key to seed.
-
-Files run in order: `nodes.cypher` → `relationships.cypher` → `demo_priya.cypher` → **`chicago_belonging.cypher`** (local graph extension).
-
-```bash
-cd backend
-source .venv/bin/activate
-python -m app.db.seed_data
-```
-
-### Run API
+Run API:
 
 ```bash
 cd backend
@@ -72,10 +95,17 @@ source .venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-- Health: [http://127.0.0.1:8000/health](http://127.0.0.1:8000/health)
-- OpenAPI: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+### 2) Seed graph data
 
-## Setup — frontend
+```bash
+cd backend
+source .venv/bin/activate
+python -m app.db.seed_data
+```
+
+The seed script only needs Neo4j variables.
+
+### 3) Frontend
 
 ```bash
 cd frontend
@@ -84,29 +114,15 @@ echo 'VITE_API_BASE_URL=http://127.0.0.1:8000' > .env.local
 npm run dev
 ```
 
-Open the printed URL (default [http://localhost:5173](http://localhost:5173)).
+Optional: set `VITE_API_TIMEOUT_MS` (default `180000`).
 
-Optional: `VITE_API_TIMEOUT_MS` for long plan/bridge calls (default 180000).
+## Demo flow
 
-## Tests (backend)
-
-```bash
-cd backend
-source .venv/bin/activate
-pytest tests/ -v
-```
-
-Covers health, profile match response shape, plan/bridge response shapes, and agent mocks.
-
-## Demo flow (hackathon)
-
-1. Seed Neo4j once per environment (`python -m app.db.seed_data`).
-2. Configure `GEMINI_API_KEY` (and Neo4j) in `backend/.env`; start backend and frontend.
-3. Confirm **API live** and Neo4j node count in the status panel (use **Retry check** if needed).
-4. Submit the profile form (defaults: **Illinois Institute of Technology**, **Chicago**; optional religion/diet fields tune ranking) → review **support**, **belonging**, and **cultural fit** scores; open **Feel at home · Chicago** for worship, verified-note events, groceries, housing, transit, and **Open in Google Maps** / optional **map preview** (embed from `maps_query`, no Maps API key).
-5. Explore the **evidence graph** (hover tooltips, click nodes for rich detail, Maps links); local node colors include worship, grocery, housing, exploration, and transit.
-6. Click **Generate my first 30 days** — structured plan with **best next action** at the top (evidence-grounded JSON; Judge prompt allows only named entities from the bundle, including local lists).
-7. Use **Explain term** or quick chips → **Cultural bridge** drawer (plain explanation, analogy, mistakes, next steps). Press **Escape** to close.
+1. Open app and verify status pills show API and Neo4j health.
+2. Complete Step 1 profile wizard and submit.
+3. If `new_to_us=true`, generate plan in Step 2; if false, Step 2 is skipped and Step 3 opens directly.
+4. Use "Explain term" to open Cultural Bridge.
+5. In Step 3, switch categories, focus cards into graph, and inspect node details with Maps.
 
 ## Documentation index
 
@@ -118,14 +134,4 @@ Covers health, profile match response shape, plan/bridge response shapes, and ag
 - [Agents spec](./docs/agents-spec.md)
 - [Prompt spec](./docs/prompt-spec.md)
 - [Demo runbook](./docs/demo-runbook.md)
-
-## Team workflow
-
-Use short-lived feature branches from `main`, own directories (`app/routers`, `app/db`, `frontend/src/components`), and open PRs early.
-
-## Next phase (after this slice)
-
-- Persist sessions (Redis/Postgres) instead of in-memory `SessionStore`.
-- Streaming responses (SSE/WebSocket) per architecture doc.
-- Expand graph coverage (more cities, richer ranking, events API).
-- Implement `RocketRide` provider class behind the same `AIProvider` interface when your HTTP contract is fixed.
+- [Implementation plan](./docs/implementation-plan.md)
