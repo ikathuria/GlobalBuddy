@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from app.config import Settings
 from app.models.schemas import BridgeExplainResponse
@@ -43,13 +44,19 @@ async def explain_term(
 ) -> BridgeExplainResponse:
     try:
         provider = get_ai_provider(settings)
-    except ValueError:
+    except ValueError as exc:
+        logger.warning("ai_event=no_provider route=bridge reason=%s fallback=true", exc)
         return _fallback_bridge(term, home_country, context)
 
+    logger.info("ai_event=bridge_start provider=%s term=%r", provider.name, term)
+    t0 = time.perf_counter()
     try:
         parsed, meta = await provider.explain_term(term, home_country, context)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.info("ai_event=bridge_ok provider=%s latency_ms=%d term=%r", provider.name, latency_ms, term)
     except Exception as exc:
-        logger.warning("Cultural bridge AI failed: %s", exc, exc_info=True)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning("ai_event=bridge_fail provider=%s latency_ms=%d term=%r error=%s", provider.name, latency_ms, term, exc, exc_info=True)
         return _fallback_bridge(term, home_country, context)
 
     return BridgeExplainResponse(

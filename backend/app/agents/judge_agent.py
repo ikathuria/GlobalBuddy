@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from typing import Any
 
 from app.config import Settings
@@ -106,13 +107,18 @@ async def generate_survival_plan(
     try:
         provider = get_ai_provider(settings)
     except ValueError as exc:
-        logger.warning("No AI provider: %s", exc)
+        logger.warning("ai_event=no_provider reason=%s fallback=true", exc)
         return _fallback_plan(evidence_bundle)
 
+    logger.info("ai_event=plan_start provider=%s", provider.name)
+    t0 = time.perf_counter()
     try:
         parsed, meta = await provider.generate_plan(evidence_bundle, student_profile)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.info("ai_event=plan_ok provider=%s latency_ms=%d", provider.name, latency_ms)
     except Exception as exc:
-        logger.warning("Judge agent AI call failed: %s", exc, exc_info=True)
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning("ai_event=plan_fail provider=%s latency_ms=%d error=%s", provider.name, latency_ms, exc, exc_info=True)
         return _fallback_plan(evidence_bundle)
 
     steps_raw = parsed.get("steps") or []

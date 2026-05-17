@@ -1,12 +1,14 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import time
 
+import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
-from app.routers import bridge, graph, plan, profile
+from app.routers import auth, bridge, graph, plan, profile
 
 
 @asynccontextmanager
@@ -38,6 +40,7 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    app.include_router(auth.router)
     app.include_router(profile.router)
     app.include_router(plan.router)
     app.include_router(bridge.router)
@@ -46,6 +49,60 @@ def create_app() -> FastAPI:
     @app.get("/health", tags=["system"])
     def health() -> dict[str, str]:
         return {"status": "ok"}
+
+    @app.get("/health/providers", tags=["system"])
+    async def health_providers() -> dict:
+        """Lightweight ping of each configured AI provider — checks reachability, not generation."""
+        settings = get_settings()
+        results: dict[str, dict] = {}
+
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            # Gemini — list models endpoint (fast, no token consumption)
+            if settings.gemini_api_key.strip():
+                t0 = time.perf_counter()
+                try:
+                    r = await client.get(
+                        "https://generativelanguage.googleapis.com/v1beta/models",
+                        params={"key": settings.gemini_api_key},
+                    )
+                    latency_ms = int((time.perf_counter() - t0) * 1000)
+                    results["gemini"] = {"status": "ok" if r.status_code == 200 else "error", "latency_ms": latency_ms, "http_status": r.status_code}
+                except Exception as exc:
+                    results["gemini"] = {"status": "timeout", "latency_ms": int((time.perf_counter() - t0) * 1000), "error": str(exc)}
+            else:
+                results["gemini"] = {"status": "not_configured"}
+
+            # Groq — list models endpoint
+            if settings.groq_api_key.strip():
+                t0 = time.perf_counter()
+                try:
+                    r = await client.get(
+                        "https://api.groq.com/openai/v1/models",
+                        headers={"Authorization": f"Bearer {settings.groq_api_key}"},
+                    )
+                    latency_ms = int((time.perf_counter() - t0) * 1000)
+                    results["groq"] = {"status": "ok" if r.status_code == 200 else "error", "latency_ms": latency_ms, "http_status": r.status_code}
+                except Exception as exc:
+                    results["groq"] = {"status": "timeout", "latency_ms": int((time.perf_counter() - t0) * 1000), "error": str(exc)}
+            else:
+                results["groq"] = {"status": "not_configured"}
+
+            # Anthropic — simple models endpoint
+            if settings.anthropic_api_key.strip():
+                t0 = time.perf_counter()
+                try:
+                    r = await client.get(
+                        "https://api.anthropic.com/v1/models",
+                        headers={"x-api-key": settings.anthropic_api_key, "anthropic-version": "2023-06-01"},
+                    )
+                    latency_ms = int((time.perf_counter() - t0) * 1000)
+                    results["anthropic"] = {"status": "ok" if r.status_code == 200 else "error", "latency_ms": latency_ms, "http_status": r.status_code}
+                except Exception as exc:
+                    results["anthropic"] = {"status": "timeout", "latency_ms": int((time.perf_counter() - t0) * 1000), "error": str(exc)}
+            else:
+                results["anthropic"] = {"status": "not_configured"}
+
+        return {"providers": results}
 
     @app.get("/health/neo4j", tags=["system"])
     async def health_neo4j(request: Request) -> dict[str, str | int | None]:

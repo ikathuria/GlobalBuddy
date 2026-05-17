@@ -54,6 +54,27 @@ class Settings(BaseSettings):
         description="Legacy full HTTPS URL for RocketRide HTTP JSON inference",
     )
 
+    # Groq — fast free fallback
+    groq_api_key: str = Field(default="", description="Groq API key for low-latency fallback")
+    groq_model: str = Field(default="llama3-8b-8192", description="Groq model id")
+
+    # Supabase — required for auth and persistent accounts (Milestone 4)
+    supabase_url: str = Field(default="", description="Supabase project URL")
+    supabase_service_role_key: str = Field(default="", description="Supabase service role key (server only)")
+    supabase_jwt_secret: str = Field(default="", description="Supabase JWT secret for token verification")
+
+    # Upstash Redis — session persistence (Milestone 6)
+    upstash_redis_url: str = Field(default="", description="Upstash Redis REST URL")
+    upstash_redis_token: str = Field(default="", description="Upstash Redis REST token")
+
+    # Resend — email (Milestone 13)
+    resend_api_key: str = Field(default="", description="Resend API key for transactional email")
+
+    # LinkedIn OAuth (Milestone 5)
+    linkedin_client_id: str = Field(default="")
+    linkedin_client_secret: str = Field(default="")
+    linkedin_redirect_uri: str = Field(default="http://localhost:8000/v1/auth/linkedin/callback")
+
     cors_origins: str = Field(default="http://localhost:5173")
 
     @field_validator("cors_origins", mode="before")
