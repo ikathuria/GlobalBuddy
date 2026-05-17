@@ -179,11 +179,11 @@ Tasks:
 **Goal:** The Cultural Bridge becomes a full persistent chat assistant — students can ask anything about US life, their city, or their situation.
 
 Tasks:
-- [ ] Add `chat_messages` table to Supabase Postgres: `{id, user_id, role (user/assistant), content, created_at}` — Done when: migration applied
-- [ ] Add `POST /v1/chat/message` FastAPI endpoint — accepts `{message, session_id}`, loads last 10 messages for context, calls Gemini/Groq, stores both user message and response, returns assistant reply — Done when: sending two consecutive messages returns a contextually aware second response
-- [ ] Create `ChatPanel.jsx` — a persistent chat interface accessible from the dashboard sidebar; shows message history, typing indicator, and quick-chip suggestions (SSN, credit score, bank account, lease) — Done when: chat renders history on mount and appends new messages in real-time
-- [ ] Replace the existing `CulturalBridgeDrawer.jsx` one-off term lookup with a link that opens `ChatPanel` pre-seeded with the term as the first message — Done when: clicking a quick chip in the old drawer opens the full chat with the term as context
-- [ ] Add Supabase Realtime subscription to `ChatPanel` so assistant responses stream into the UI as they arrive — Done when: assistant reply appears word-by-word without page refresh
+- [ ] Add `chat_messages` table to Supabase Postgres: `{id, user_id, role (user/assistant), content, created_at}` — Done when: migration applied (blocked: waiting on Supabase credentials)
+- [x] Add `POST /v1/chat/message` FastAPI endpoint — accepts `{message, session_id}`, loads last 10 messages for context, calls Gemini/Groq, stores both user message and response, returns assistant reply — Done when: sending two consecutive messages returns a contextually aware second response
+- [x] Create `ChatPage.jsx` at `/chat` — persistent chat interface with message history, typing indicator, and quick-chip suggestions (SSN, bank, health insurance, lease, SEVIS, credit score) — Done when: chat renders history on mount and appends new messages
+- [ ] Replace the existing `CulturalBridgeDrawer.jsx` one-off term lookup with a link that opens `/chat` pre-seeded with the term as the first message — Done when: clicking a quick chip in the old drawer navigates to chat with the term as context
+- [ ] Add Supabase Realtime subscription so assistant responses stream into the UI as they arrive — Done when: assistant reply appears word-by-word without page refresh (blocked: waiting on Supabase credentials)
 
 ---
 

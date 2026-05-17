@@ -11,10 +11,10 @@ from starlette.responses import Response
 
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
-from app.routers import auth, bridge, graph, plan, pre_arrival, profile
+from app.routers import auth, bridge, chat, graph, plan, pre_arrival, profile
 
 _telemetry_logger = logging.getLogger("app.telemetry")
-_TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain"}
+_TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain", "/v1/chat/message"}
 
 
 class _RequestTelemetryMiddleware(BaseHTTPMiddleware):
@@ -72,6 +72,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router)
+    app.include_router(chat.router)
     app.include_router(pre_arrival.router)
     app.include_router(profile.router)
     app.include_router(plan.router)

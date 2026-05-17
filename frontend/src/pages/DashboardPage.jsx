@@ -12,7 +12,7 @@ const STAGES = [
 const QUICK_ACTIONS = [
   { label: "Continue Onboarding", desc: "Pick up your 3-step arrival plan", href: "/", icon: "📋", ready: true },
   { label: "Pre-Arrival Checklist", desc: "Prepare before you land", href: "/pre-arrival", icon: "✈️", ready: true },
-  { label: "AI Chat", desc: "Ask anything about US life", href: "/chat", icon: "💬", ready: false },
+  { label: "AI Chat", desc: "Ask anything about US life", href: "/chat", icon: "💬", ready: true },
   { label: "Find Mentors", desc: "Connect with settled students", href: "/mentors", icon: "👥", ready: false },
   { label: "Discover Feed", desc: "Events and guides in your city", href: "/feed", icon: "🌆", ready: false },
 ];

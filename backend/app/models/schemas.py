@@ -219,6 +219,38 @@ class BridgeExplainResponse(BaseModel):
     llm_provider: str
 
 
+# --- Chat ---
+class ChatMessageRequest(BaseModel):
+    message: str
+    session_id: str | None = None
+
+
+class ChatHistoryItem(BaseModel):
+    role: str  # "user" | "assistant"
+    content: str
+
+
+class ChatMessageResponse(BaseModel):
+    reply: str
+    session_id: str
+    fallback_used: bool = False
+
+
+class ChatHistoryResponse(BaseModel):
+    session_id: str
+    messages: list[ChatHistoryItem]
+
+
+# --- Pre-arrival ---
+class PreArrivalItem(BaseModel):
+    id: str
+    name: str
+    description: str
+    when: str
+    priority: str
+    category: str
+
+
 # --- Graph ---
 class GraphSubgraphResponse(BaseModel):
     nodes: list[GraphNode]

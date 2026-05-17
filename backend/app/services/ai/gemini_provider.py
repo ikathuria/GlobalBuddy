@@ -44,6 +44,11 @@ Schema:
 }
 """
 
+_CHAT_SYSTEM = """You are Globalदोस्त's AI assistant for international students arriving in the US.
+Help with: F-1/J-1 visa paperwork, banking, SSN, housing leases, health insurance, cultural adjustment, campus life, city navigation, and anything a new student might need.
+Be concise, friendly, and practical. Use plain language. Do not give legal advice — recommend official sources (ssa.gov, uscis.gov, studentaid.gov) for legal or immigration questions.
+Keep replies under 200 words unless the student explicitly asks for more detail."""
+
 
 class GeminiProvider:
     name = "gemini"
@@ -79,6 +84,30 @@ class GeminiProvider:
         text = await asyncio.to_thread(_call)
         parsed = extract_json_object(text) or {}
         return parsed, {"provider": self.name, "model": self._settings.gemini_model}
+
+    async def chat_reply(self, history: list[dict], message: str) -> str:
+        """Free-text conversational reply given chat history + new message."""
+        import google.generativeai as genai
+
+        genai.configure(api_key=self._settings.gemini_api_key)
+        model = genai.GenerativeModel(self._settings.gemini_model)
+
+        lines = [_CHAT_SYSTEM, ""]
+        for msg in history:
+            role = "Student" if msg["role"] == "user" else "Assistant"
+            lines.append(f"{role}: {msg['content']}")
+        lines.append(f"Student: {message}")
+        lines.append("Assistant:")
+        prompt = "\n".join(lines)
+
+        def _call() -> str:
+            response = model.generate_content(
+                prompt,
+                generation_config=genai.GenerationConfig(temperature=0.6),
+            )
+            return response.text or ""
+
+        return await asyncio.to_thread(_call)
 
     async def explain_term(
         self,
