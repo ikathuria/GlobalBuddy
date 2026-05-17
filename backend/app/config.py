@@ -54,6 +54,9 @@ class Settings(BaseSettings):
         description="Legacy full HTTPS URL for RocketRide HTTP JSON inference",
     )
 
+    # AI call timeout
+    ai_timeout_seconds: int = Field(default=30, description="Hard timeout for each AI provider call (plan + bridge)")
+
     # Groq — fast free fallback
     groq_api_key: str = Field(default="", description="Groq API key for low-latency fallback")
     groq_model: str = Field(default="llama3-8b-8192", description="Groq model id")

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 
@@ -48,12 +49,20 @@ async def explain_term(
         logger.warning("ai_event=no_provider route=bridge reason=%s fallback=true", exc)
         return _fallback_bridge(term, home_country, context)
 
-    logger.info("ai_event=bridge_start provider=%s term=%r", provider.name, term)
+    timeout = settings.ai_timeout_seconds
+    logger.info("ai_event=bridge_start provider=%s term=%r timeout_s=%d", provider.name, term, timeout)
     t0 = time.perf_counter()
     try:
-        parsed, meta = await provider.explain_term(term, home_country, context)
+        parsed, meta = await asyncio.wait_for(
+            provider.explain_term(term, home_country, context),
+            timeout=timeout,
+        )
         latency_ms = int((time.perf_counter() - t0) * 1000)
         logger.info("ai_event=bridge_ok provider=%s latency_ms=%d term=%r", provider.name, latency_ms, term)
+    except asyncio.TimeoutError:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning("ai_event=bridge_timeout provider=%s latency_ms=%d term=%r timeout_s=%d", provider.name, latency_ms, term, timeout)
+        return _fallback_bridge(term, home_country, context)
     except Exception as exc:
         latency_ms = int((time.perf_counter() - t0) * 1000)
         logger.warning("ai_event=bridge_fail provider=%s latency_ms=%d term=%r error=%s", provider.name, latency_ms, term, exc, exc_info=True)

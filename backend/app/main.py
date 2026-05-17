@@ -1,14 +1,44 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+import logging
 import time
 
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
 from app.routers import auth, bridge, graph, plan, profile
+
+_telemetry_logger = logging.getLogger("app.telemetry")
+_TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain"}
+
+
+class _RequestTelemetryMiddleware(BaseHTTPMiddleware):
+    """Log method, path, status, and elapsed_ms for AI-heavy routes."""
+
+    async def dispatch(self, request: Request, call_next: object) -> Response:
+        if request.url.path not in _TELEMETRY_ROUTES:
+            return await call_next(request)
+        t0 = time.perf_counter()
+        try:
+            response: Response = await call_next(request)
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            _telemetry_logger.info(
+                "request method=%s path=%s status=%d elapsed_ms=%d",
+                request.method, request.url.path, response.status_code, elapsed_ms,
+            )
+            return response
+        except Exception as exc:
+            elapsed_ms = int((time.perf_counter() - t0) * 1000)
+            _telemetry_logger.warning(
+                "request method=%s path=%s error=%s elapsed_ms=%d",
+                request.method, request.url.path, type(exc).__name__, elapsed_ms,
+            )
+            raise
 
 
 @asynccontextmanager
@@ -31,6 +61,7 @@ def create_app() -> FastAPI:
 
     # Regex covers localhost / 127.0.0.1 / [::1] with any port (browser Origin must match for CORS).
     _local_origin_regex = r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?"
+    app.add_middleware(_RequestTelemetryMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,

@@ -142,12 +142,12 @@ Tasks:
 **Goal:** Logs, error telemetry, and tests make failure visible and recoverable in production.
 
 Tasks:
-- [ ] Add structured JSON logging to `services/ai/factory.py` — log provider chosen, latency ms, fallback triggered — Done when: uvicorn output shows JSON log lines per AI call
-- [ ] Add request-level timeout middleware to `/v1/plan` and `/v1/bridge` — log elapsed time and error type before returning fallback — Done when: a simulated timeout logs elapsed ms and returns deterministic fallback
-- [ ] Add `GET /health/providers` endpoint that pings Gemini and Groq and returns status + latency for each — Done when: endpoint returns `{gemini: {status, latency_ms}, groq: {status, latency_ms}}`
-- [ ] Write regression tests for `new_to_us=False` skip behavior — Done when: `pytest` passes with explicit fixture
-- [ ] Write smoke tests for the full 3-step flow using mock Neo4j responses — Done when: `pytest` passes without a live Neo4j connection
-- [ ] Replace in-memory session store with Upstash Redis-backed store, TTL 24h — Done when: session survives `uvicorn` restart
+- [x] Add structured JSON logging to AI agents — `ai_event=` log lines with provider name, latency_ms, and fallback flag in `judge_agent.py` and `cultural_bridge_agent.py`
+- [x] Add request-level timeout middleware to `/v1/plan` and `/v1/bridge` — `_RequestTelemetryMiddleware` in `main.py` logs elapsed_ms; AI calls wrapped with `asyncio.wait_for(timeout=AI_TIMEOUT_SECONDS)` with explicit `asyncio.TimeoutError` handling and fallback
+- [x] Add `GET /health/providers` endpoint that pings Gemini, Groq, and Anthropic — returns `{status, latency_ms}` per provider; `not_configured` when key absent
+- [x] Write regression tests for `new_to_us=False` skip behavior — `tests/test_new_to_us.py` (5 tests, all passing)
+- [x] Write smoke tests for the full 3-step flow using mock Neo4j responses — `tests/test_smoke.py` (13 tests covering profile→plan→bridge→graph + AI timeout fallback paths, all passing)
+- [ ] Replace in-memory session store with Upstash Redis-backed store, TTL 24h — Done when: session survives `uvicorn` restart (requires UPSTASH_REDIS_URL)
 
 ---
 

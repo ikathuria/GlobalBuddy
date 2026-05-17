@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from typing import Any
@@ -110,12 +111,20 @@ async def generate_survival_plan(
         logger.warning("ai_event=no_provider reason=%s fallback=true", exc)
         return _fallback_plan(evidence_bundle)
 
-    logger.info("ai_event=plan_start provider=%s", provider.name)
+    timeout = settings.ai_timeout_seconds
+    logger.info("ai_event=plan_start provider=%s timeout_s=%d", provider.name, timeout)
     t0 = time.perf_counter()
     try:
-        parsed, meta = await provider.generate_plan(evidence_bundle, student_profile)
+        parsed, meta = await asyncio.wait_for(
+            provider.generate_plan(evidence_bundle, student_profile),
+            timeout=timeout,
+        )
         latency_ms = int((time.perf_counter() - t0) * 1000)
         logger.info("ai_event=plan_ok provider=%s latency_ms=%d", provider.name, latency_ms)
+    except asyncio.TimeoutError:
+        latency_ms = int((time.perf_counter() - t0) * 1000)
+        logger.warning("ai_event=plan_timeout provider=%s latency_ms=%d timeout_s=%d", provider.name, latency_ms, timeout)
+        return _fallback_plan(evidence_bundle)
     except Exception as exc:
         latency_ms = int((time.perf_counter() - t0) * 1000)
         logger.warning("ai_event=plan_fail provider=%s latency_ms=%d error=%s", provider.name, latency_ms, exc, exc_info=True)
