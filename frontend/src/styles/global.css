@@ -1926,3 +1926,353 @@ a {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* ── Pre-arrival checklist page ──────────────────────────────────────────── */
+
+.gb-pa-hero {
+  padding: 1.3rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.gb-pa-hero h1 {
+  margin: 0;
+  font-family: var(--gb-font-display);
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  letter-spacing: -0.02em;
+}
+
+.gb-pa-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(14, 165, 164, 0.15);
+  overflow: hidden;
+}
+
+.gb-pa-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gb-accent), var(--gb-accent-strong));
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.gb-pa-progress-label {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--gb-muted);
+  font-weight: 600;
+}
+
+.gb-pa-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.gb-pa-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--gb-border);
+  background: var(--gb-surface);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  color: var(--gb-muted);
+  transition: all 0.15s;
+}
+
+.gb-pa-tab--active {
+  background: linear-gradient(135deg, var(--gb-accent), var(--gb-accent-strong));
+  color: #fff;
+  border-color: transparent;
+}
+
+.gb-pa-tab-count {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.gb-pa-tab--active .gb-pa-tab-count {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.gb-pa-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gb-pa-item {
+  padding: 0.85rem 1rem;
+  transition: opacity 0.2s;
+}
+
+.gb-pa-item--done {
+  opacity: 0.6;
+}
+
+.gb-pa-item-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.gb-pa-checkbox {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--gb-border-strong);
+  background: rgba(255, 255, 255, 0.7);
+  flex-shrink: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--gb-accent);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.gb-pa-item--done .gb-pa-checkbox {
+  background: var(--gb-accent);
+  border-color: var(--gb-accent);
+  color: #fff;
+}
+
+.gb-pa-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.gb-pa-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.gb-pa-item-name {
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.gb-pa-item--done .gb-pa-item-name {
+  text-decoration: line-through;
+  color: var(--gb-muted);
+}
+
+.gb-pa-item-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.88rem;
+  color: var(--gb-muted);
+  line-height: 1.5;
+}
+
+.gb-pa-expand {
+  border: none;
+  background: none;
+  color: var(--gb-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.gb-priority-badge {
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.gb-priority--critical {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+}
+
+.gb-priority--high {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+.gb-priority--medium {
+  background: rgba(14, 165, 164, 0.1);
+  color: var(--gb-accent);
+}
+
+.gb-priority--low {
+  background: rgba(79, 100, 121, 0.1);
+  color: var(--gb-muted);
+}
+
+.gb-pa-footer-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 1rem 1.2rem;
+  border-radius: var(--gb-radius-sm);
+  background: var(--gb-surface);
+  border: 1px solid var(--gb-border);
+  font-size: 0.88rem;
+  color: var(--gb-muted);
+}
+
+/* ── Document tracker component ──────────────────────────────────────────── */
+
+.gb-doc-tracker {
+  padding: 1.2rem;
+}
+
+.gb-doc-tracker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+
+.gb-doc-tracker-count {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--gb-accent);
+}
+
+.gb-doc-tracker-hint {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: var(--gb-muted);
+}
+
+.gb-doc-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--gb-border);
+  border-radius: var(--gb-radius-sm);
+  background: rgba(255, 255, 255, 0.5);
+  transition: border-color 0.2s;
+}
+
+.gb-doc-item--done {
+  border-color: rgba(14, 165, 164, 0.35);
+  background: rgba(14, 165, 164, 0.04);
+  opacity: 0.75;
+}
+
+.gb-doc-item--in_progress {
+  border-color: rgba(217, 119, 6, 0.3);
+  background: rgba(217, 119, 6, 0.04);
+}
+
+.gb-doc-status-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--gb-border);
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s;
+  color: var(--gb-muted);
+}
+
+.gb-doc-status-btn--in_progress {
+  border-color: #d97706;
+  color: #d97706;
+}
+
+.gb-doc-status-btn--done {
+  border-color: var(--gb-accent);
+  background: var(--gb-accent);
+  color: #fff;
+}
+
+.gb-doc-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.gb-doc-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.gb-doc-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.gb-doc-when {
+  font-size: 0.75rem;
+  color: var(--gb-muted);
+}
+
+.gb-doc-drawer {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--gb-muted);
+  line-height: 1.5;
+}
+
+.gb-doc-link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--gb-accent-strong);
+}
+
+.gb-doc-expand-btn {
+  border: none;
+  background: none;
+  color: var(--gb-muted);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.2rem;
+  flex-shrink: 0;
+}
+
+.gb-doc-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.gb-doc-tag--pending {
+  background: rgba(79, 100, 121, 0.1);
+  color: var(--gb-muted);
+}
+
+.gb-doc-tag--in_progress {
+  background: rgba(217, 119, 6, 0.1);
+  color: #d97706;
+}
+
+.gb-doc-tag--done {
+  background: rgba(14, 165, 164, 0.12);
+  color: var(--gb-accent);
+}

@@ -167,11 +167,11 @@ Tasks:
 **Goal:** Students can prepare before landing and track critical first-month documents.
 
 Tasks:
-- [ ] Add `PreArrivalChecklist` node type to Neo4j seed data with ~15 items (book temporary housing, get international SIM, carry printed I-20, notify bank of travel, download offline maps, arrange airport pickup) — Done when: nodes exist in graph with `category: pre_arrival`
-- [ ] Add `/pre-arrival` route and `PreArrivalPanel.jsx` component — a checklist page accessible before Step 1 (no auth required) — Done when: visiting `/pre-arrival` shows an interactive checklist
-- [ ] Add `DocumentTracker` component to the dashboard — tracks SSN, bank account, student ID, health insurance, I-20 copy, lease with status (pending / in-progress / done) and links to how-to guides — Done when: each document item has a status toggle and an info drawer
-- [ ] Persist document tracker state to Supabase `user_documents` table (user_id, doc_type, status, updated_at) — Done when: document status persists across sessions
-- [ ] Add `Task` graph nodes for each document (SSN, bank, health insurance) linked to the plan's topological order — Done when: plan generation includes document tasks in the correct sequence
+- [x] Add `PreArrivalChecklist` node type to Neo4j seed data with ~15 items (book temporary housing, get international SIM, carry printed I-20, notify bank of travel, download offline maps, arrange airport pickup) — Done when: nodes exist in graph with `category: pre_arrival`
+- [x] Add `/pre-arrival` route and `PreArrivalPanel.jsx` component — a checklist page accessible before Step 1 (no auth required) — Done when: visiting `/pre-arrival` shows an interactive checklist
+- [x] Add `DocumentTracker` component to the dashboard — tracks SSN, bank account, student ID, health insurance, I-20 copy, lease with status (pending / in-progress / done) and links to how-to guides — Done when: each document item has a status toggle and an info drawer
+- [ ] Persist document tracker state to Supabase `user_documents` table (user_id, doc_type, status, updated_at) — Done when: document status persists across sessions (blocked: waiting on Supabase credentials)
+- [x] Add `Task` graph nodes for each document (SSN, bank, health insurance) linked to the plan's topological order — Done when: plan generation includes document tasks in the correct sequence
 
 ---
 

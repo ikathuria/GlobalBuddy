@@ -11,7 +11,7 @@ from starlette.responses import Response
 
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
-from app.routers import auth, bridge, graph, plan, profile
+from app.routers import auth, bridge, graph, plan, pre_arrival, profile
 
 _telemetry_logger = logging.getLogger("app.telemetry")
 _TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain"}
@@ -72,6 +72,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(auth.router)
+    app.include_router(pre_arrival.router)
     app.include_router(profile.router)
     app.include_router(plan.router)
     app.include_router(bridge.router)

@@ -1,5 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
+import DocumentTracker from "../components/DocumentTracker.jsx";
 
 const STAGES = [
   { id: "newcomer", label: "Newcomer", desc: "First 3 months", icon: "✈️" },
@@ -10,18 +11,12 @@ const STAGES = [
 
 const QUICK_ACTIONS = [
   { label: "Continue Onboarding", desc: "Pick up your 3-step arrival plan", href: "/", icon: "📋", ready: true },
+  { label: "Pre-Arrival Checklist", desc: "Prepare before you land", href: "/pre-arrival", icon: "✈️", ready: true },
   { label: "AI Chat", desc: "Ask anything about US life", href: "/chat", icon: "💬", ready: false },
   { label: "Find Mentors", desc: "Connect with settled students", href: "/mentors", icon: "👥", ready: false },
   { label: "Discover Feed", desc: "Events and guides in your city", href: "/feed", icon: "🌆", ready: false },
 ];
 
-const DOCUMENTS = [
-  { id: "ssn", label: "Social Security Number (SSN)", status: "pending" },
-  { id: "bank", label: "US Bank Account", status: "pending" },
-  { id: "health", label: "Health Insurance", status: "pending" },
-  { id: "student_id", label: "University Student ID", status: "pending" },
-  { id: "lease", label: "Signed Lease / Housing", status: "pending" },
-];
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -105,22 +100,7 @@ export default function DashboardPage() {
 
         {/* Document tracker */}
         <section className="gb-card gb-dash-docs" aria-label="Document tracker">
-          <h2 className="gb-section-title">Document Tracker</h2>
-          <p style={{ color: "var(--gb-muted)", fontSize: "0.9rem", margin: "0 0 1rem" }}>
-            Track your critical first-month documents. Mark them done as you collect them.
-          </p>
-          <ul className="gb-doc-list">
-            {DOCUMENTS.map((doc) => (
-              <li key={doc.id} className="gb-doc-item">
-                <span className="gb-doc-status gb-doc-status--pending" aria-label="Pending" />
-                <span>{doc.label}</span>
-                <span className="gb-doc-tag">Pending</span>
-              </li>
-            ))}
-          </ul>
-          <p className="gb-dash-note">
-            Persistence coming in Milestone 5 — document states will save to your account.
-          </p>
+          <DocumentTracker />
         </section>
       </div>
     </div>
