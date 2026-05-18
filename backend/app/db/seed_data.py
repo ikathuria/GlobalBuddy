@@ -16,6 +16,8 @@ _SEED_FILES = (
     "demo_priya.cypher",
     "chicago_belonging.cypher",
     "pre_arrival.cypher",
+    "boston.cypher",
+    "nyc.cypher",
 )
 
 

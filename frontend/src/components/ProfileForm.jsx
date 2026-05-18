@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import client from "../api/client.js";
 
+const SUPPORTED_CITIES = [
+  { value: "Chicago", label: "Chicago, IL" },
+  { value: "Boston", label: "Boston, MA" },
+  { value: "New York", label: "New York, NY" },
+];
+
 const defaultProfile = {
   full_name: "",
   email: "",
@@ -315,13 +321,17 @@ export default function ProfileForm({ onMatch }) {
 
               <label className="gb-field">
                 <span>Target city (US) *</span>
-                <input
+                <select
                   value={form.target_city}
                   onChange={(event) => update("target_city", event.target.value)}
-                  placeholder="Chicago"
                   required
-                />
-                <small>Used for local resources and event recommendations.</small>
+                >
+                  {SUPPORTED_CITIES.map((c) => (
+                    <option key={c.value} value={c.value}>{c.label}</option>
+                  ))}
+                  <option value="other" disabled>More cities coming soon…</option>
+                </select>
+                <small>Full graph data available for Chicago, Boston, and New York.</small>
               </label>
 
               <label className="gb-field">

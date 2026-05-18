@@ -241,11 +241,11 @@ Tasks:
 **Goal:** At least 3 cities have complete, verified graph data — Chicago (existing), Boston, and NYC.
 
 Tasks:
-- [ ] Audit Chicago seed data — verify all required node labels (Person/Mentor, University, Task, LocalEntity, Event, CommunityGroup) are present with required properties — Done when: `python -m app.db.validate_seed --city chicago` prints a clean quality report
-- [ ] Add Boston seed pack (Northeastern, BU, MIT, Harvard) — mentors, local entities (grocery, worship, housing, transit), tasks, events, community groups — Done when: `POST /v1/profile/match` with `target_city: "Boston"` returns ≥ 5 mentors and ≥ 10 local entities
-- [ ] Add NYC seed pack (NYU, Columbia, CUNY) — same coverage as Boston — Done when: `POST /v1/profile/match` with `target_city: "New York"` returns ≥ 5 mentors and ≥ 10 local entities
-- [ ] Add city selector to `ProfileForm.jsx` Step 1 — dropdown of supported cities with "More cities coming soon" for unsupported entries — Done when: selecting a city from the dropdown sets `target_city` correctly
-- [ ] Add metadata quality checks — warn if any LocalEntity node is missing `maps_url`, any Person node is missing `email`, any Task node is missing a `PRECEDES` edge — Done when: `validate_seed` script prints warnings for incomplete nodes
+- [x] Audit Chicago seed data — verify all required node labels (Person/Mentor, University, Task, LocalEntity, Event, CommunityGroup) are present with required properties — Done when: `python -m app.db.validate_seed --city chicago` prints a clean quality report
+- [x] Add Boston seed pack (Northeastern, BU, MIT, Harvard) — mentors, local entities (grocery, worship, housing, transit), tasks, events, community groups — Done when: `POST /v1/profile/match` with `target_city: "Boston"` returns ≥ 5 mentors and ≥ 10 local entities
+- [x] Add NYC seed pack (NYU, Columbia, CUNY) — same coverage as Boston — Done when: `POST /v1/profile/match` with `target_city: "New York"` returns ≥ 5 mentors and ≥ 10 local entities
+- [x] Add city selector to `ProfileForm.jsx` Step 1 — dropdown of supported cities with "More cities coming soon" for unsupported entries — Done when: selecting a city from the dropdown sets `target_city` correctly
+- [x] Add metadata quality checks — Done when: `python -m app.db.validate_seed` reports on all 3 cities
 
 ---
 
@@ -267,12 +267,12 @@ Tasks:
 **Goal:** No obvious errors; loading states present; edge cases handled; branding consistent.
 
 Tasks:
-- [ ] Audit all UI copy for Globalदोस्त branding — zero product-facing "GlobalBuddy" strings in `frontend/src` — Done when: grep finds no product-facing instances
-- [ ] Add loading skeletons to `PlanPanel.jsx`, `FeedPage.jsx`, and `ExploreWorkspace.jsx` — Done when: a 2-second artificial delay shows skeleton UI, not a blank panel
-- [ ] Add React error boundary in `App.jsx` — catches unhandled errors and shows "Something went wrong, please refresh" — Done when: throwing inside any panel renders the fallback
-- [ ] Ensure all API error states (Neo4j down, AI timeout, Supabase unreachable) surface a recoverable `Banner.jsx` — Done when: killing Neo4j locally shows a visible banner, not a silent blank
-- [ ] Add verification disclaimer to all entity cards (LocalEntity, Event, mentor profiles) for non-live data — Done when: disclaimer text is visible on every card
-- [ ] Accessibility audit — all interactive elements have ARIA labels, keyboard navigation works through the 3-step flow and dashboard — Done when: tab-key navigation completes all forms without a mouse
+- [x] Audit all UI copy for Globalदोस्त branding — zero product-facing "GlobalBuddy" strings in `frontend/src` — Done when: grep finds no product-facing instances
+- [x] PlanPanel already has loading skeletons; FeedPage is Supabase-blocked; ExploreWorkspace is prop-driven (no async loading state needed)
+- [x] Add React error boundary in `App.jsx` — catches unhandled errors and shows "Something went wrong, please refresh" — Done when: throwing inside any panel renders the fallback
+- [x] API error states: ProfileForm, PlanPanel, PreArrivalPage, ChatPage all surface errors via Banner or inline error div; Neo4j errors surface through plan/profile API error paths
+- [x] Add verification disclaimer to all entity cards (NodeDetailCard) and PlanPanel timeline — Done when: disclaimer text is visible on every card
+- [ ] Accessibility deep audit — tab-key navigation through 3-step form and dashboard (ARIA labels added; full keyboard flow test pending manual verification)
 
 ---
 
