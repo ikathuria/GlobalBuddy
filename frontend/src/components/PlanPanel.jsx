@@ -236,8 +236,8 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
             </div>
           </div>
 
-          <div className="gb-plan-meta">
-            Provider: {plan.llm_provider} | fallback: {String(plan.fallback_used)} | confidence: {plan.confidence}
+          <div className="gb-plan-disclaimer">
+            Verify all dates, places, and contact details independently before acting on this plan.
           </div>
 
           {groupedTimeline.map(([week, items]) => (

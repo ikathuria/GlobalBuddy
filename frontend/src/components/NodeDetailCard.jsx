@@ -64,6 +64,10 @@ export default function NodeDetailCard({ node, onClear }) {
       </div>
 
       <MapPreviewPanel mapsLink={node.maps_link} mapsQuery={node.maps_query} title={node.label} />
+
+      <p className="gb-node-disclaimer">
+        Demo data — verify hours, addresses, and contact details independently before visiting.
+      </p>
     </div>
   );
 }
