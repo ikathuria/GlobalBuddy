@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from app.db.postgres import PostgresDatabase
@@ -203,3 +204,59 @@ async def set_user_document_status(
     if row is None:
         raise RuntimeError("Unable to persist document status.")
     return row
+
+
+async def set_app_session(
+    db: PostgresDatabase,
+    *,
+    session_id: str,
+    payload: dict[str, Any],
+    ttl_hours: int = 24,
+) -> dict[str, Any]:
+    row = await db.fetchrow(
+        """
+        insert into app_sessions (session_id, payload, expires_at, updated_at)
+        values ($1, $2::jsonb, now() + ($3::text || ' hours')::interval, now())
+        on conflict (session_id) do update
+          set payload = excluded.payload,
+              expires_at = excluded.expires_at,
+              updated_at = now()
+        returning session_id, payload, expires_at
+        """,
+        session_id,
+        json.dumps(payload),
+        ttl_hours,
+    )
+    if row is None:
+        raise RuntimeError("Unable to persist app session.")
+    return row
+
+
+async def get_app_session(db: PostgresDatabase, *, session_id: str) -> dict[str, Any] | None:
+    await db.execute("delete from app_sessions where expires_at <= now()")
+    row = await db.fetchrow(
+        """
+        select payload
+        from app_sessions
+        where session_id = $1 and expires_at > now()
+        """,
+        session_id,
+    )
+    if row is None:
+        return None
+    payload = row.get("payload")
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    return dict(payload) if isinstance(payload, dict) else None
+
+
+async def update_app_session(
+    db: PostgresDatabase,
+    *,
+    session_id: str,
+    ttl_hours: int = 24,
+    **fields: Any,
+) -> dict[str, Any] | None:
+    current = await get_app_session(db, session_id=session_id) or {}
+    current.update(fields)
+    return await set_app_session(db, session_id=session_id, payload=current, ttl_hours=ttl_hours)

@@ -88,6 +88,7 @@ class Settings(BaseSettings):
 
     upstash_redis_url: str = Field(default="", description="Upstash Redis REST URL")
     upstash_redis_token: str = Field(default="", description="Upstash Redis REST token")
+    session_ttl_hours: int = Field(default=24, description="Profile/evidence session TTL in hours")
     resend_api_key: str = Field(default="", description="Resend API key for transactional email")
 
     linkedin_client_id: str = Field(default="")

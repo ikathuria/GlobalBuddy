@@ -100,6 +100,11 @@ Relationships are generated from:
 - `plan_progress`: `user_id`, `task_id`, `completed`, `updated_at`
 - `user_documents`: `user_id`, `doc_type`, `status`, `updated_at`
 
+### App Sessions
+- `app_sessions`: `session_id`, `payload`, `expires_at`, `created_at`, `updated_at`
+
+Profile match evidence and subgraphs are cached here for 24 hours by default so plan and graph routes can survive API process restarts.
+
 ### Chat
 - `chat_messages`: `id`, `user_id`, `session_id`, `role`, `content`, `created_at`
 

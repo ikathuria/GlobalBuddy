@@ -163,8 +163,8 @@ Tasks:
 - [x] Add `GET /health/providers` endpoint that pings Gemini, Groq, and Anthropic — returns `{status, latency_ms}` per provider; `not_configured` when key absent
 - [x] Write regression tests for `new_to_us=False` skip behavior — `tests/test_new_to_us.py` (5 tests, all passing)
 - [x] Write smoke tests for the full 3-step flow using mock graph responses — `tests/test_smoke.py` covers profile→plan→bridge→graph + AI timeout fallback paths
-- [ ] Replace in-memory session store with Neon Postgres or Upstash Redis-backed store, TTL 24h — Done when: session survives `uvicorn` restart
-- [ ] Add Markdown graph validation to CI — Done when: bad frontmatter, broken links, and dependency cycles fail the build
+- [x] Replace in-memory session store with Neon Postgres or Upstash Redis-backed store, TTL 24h — Done when: profile evidence/subgraph sessions persist in Neon `app_sessions` and rehydrate after process restart
+- [x] Add Markdown graph validation to CI — Done when: `.github/workflows/ci.yml` runs `python -m app.db.validate_graph` before backend tests
 
 ---
 

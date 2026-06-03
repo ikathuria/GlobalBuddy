@@ -78,6 +78,7 @@ Copy `backend/.env.example` to `backend/.env`.
 | `NEON_AUTH_ISSUER` | Optional expected JWT issuer |
 | `NEON_AUTH_AUDIENCE` | Optional expected JWT audience |
 | `AUTH_REQUIRED` | Set `true` to enforce JWT auth on protected API routes |
+| `SESSION_TTL_HOURS` | Profile/evidence session TTL for Neon `app_sessions` |
 | `AI_PROVIDER` | `auto`, `gemini`, `rocketride_sdk`, `rocketride_http`, `anthropic` |
 | `GEMINI_API_KEY` | Gemini key (recommended path) |
 | `GEMINI_MODEL` | Gemini model id (default `gemini-2.0-flash`) |
