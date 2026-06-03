@@ -88,6 +88,9 @@ Copy `backend/.env.example` to `backend/.env`.
 | `ROCKETRIDE_BRIDGE_PIPELINE` | Bridge pipeline path |
 | `ROCKETRIDE_HTTP_COMPLETION_URL` | Legacy RocketRide HTTP completion URL |
 | `ANTHROPIC_API_KEY` | Anthropic key |
+| `LINKEDIN_CLIENT_ID` | LinkedIn Developer App client id for Neon Auth provider setup |
+| `LINKEDIN_CLIENT_SECRET` | LinkedIn Developer App secret for Neon Auth provider setup |
+| `LINKEDIN_REDIRECT_URI` | OAuth redirect URI registered with LinkedIn/Neon |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
 
 Legacy Neo4j variables may still be used by the optional adapter. The default graph source is Markdown.

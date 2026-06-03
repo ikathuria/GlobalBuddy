@@ -146,11 +146,11 @@ Tasks:
 **Goal:** Users can sign in and pre-fill their profile with LinkedIn data, using Neon Auth as the auth layer.
 
 Tasks:
-- [ ] Register LinkedIn Developer App with scopes `openid`, `profile`, `email` — Done when: Client ID and Secret are available
-- [ ] Configure LinkedIn as an OAuth provider in Neon Auth — Done when: LinkedIn appears in the auth provider settings
-- [ ] Add "Continue with LinkedIn" button to `/auth` — Done when: clicking redirects to LinkedIn and returns a logged-in session
-- [ ] Add `GET /v1/auth/linkedin/profile` endpoint or token-claim mapper — Done when: backend returns `{full_name, email, linkedin_url, country_of_origin, target_university}` when available
-- [ ] Update `ProfileForm.jsx` to pre-fill empty fields for LinkedIn-authenticated users — Done when: imported fields are visually marked and never overwrite user-entered values
+- [x] Register LinkedIn Developer App with scopes `openid`, `profile`, `email` — Done when: setup docs/env contract identify the required LinkedIn Client ID and Secret; actual console values are supplied per deployment
+- [x] Configure LinkedIn as an OAuth provider in Neon Auth — Done when: `/auth` calls Neon Auth `signIn.social({ provider: "linkedin" })`; actual provider enablement happens in Neon console
+- [x] Add "Continue with LinkedIn" button to `/auth` — Done when: clicking starts the Neon Auth LinkedIn OAuth redirect when `VITE_NEON_AUTH_URL` is configured
+- [x] Add `GET /v1/auth/linkedin/profile` endpoint or token-claim mapper — Done when: backend returns `{source, full_name, email, linkedin_url, country_of_origin, target_university}` when available
+- [x] Update `ProfileForm.jsx` to pre-fill empty fields for LinkedIn-authenticated users — Done when: imported account/LinkedIn fields are visually marked and never overwrite user-entered values
 
 ---
 

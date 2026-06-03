@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 export default function AuthPage() {
-  const { signIn, signUp, user } = useAuth();
+  const { authConfigured, signIn, signUp, signInWithLinkedIn, user } = useAuth();
   const navigate = useNavigate();
 
   const [mode, setMode] = useState("login");
@@ -12,6 +12,7 @@ export default function AuthPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [linkedinLoading, setLinkedinLoading] = useState(false);
 
   useEffect(() => {
     if (user) navigate("/dashboard", { replace: true });
@@ -38,6 +39,19 @@ export default function AuthPage() {
       setError(err.message || "Something went wrong.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleLinkedIn = async () => {
+    setError(null);
+    setLinkedinLoading(true);
+    try {
+      const result = await signInWithLinkedIn();
+      if (result.error) setError(result.error.message || "LinkedIn sign-in failed.");
+    } catch (err) {
+      setError(err.message || "LinkedIn sign-in failed.");
+    } finally {
+      setLinkedinLoading(false);
     }
   };
 
@@ -78,10 +92,15 @@ export default function AuthPage() {
               {mode === "signup" ? "Create your account" : "Welcome back"}
             </p>
 
-            <button type="button" className="gb-btn gb-btn-linkedin" disabled>
+            <button
+              type="button"
+              className="gb-btn gb-btn-linkedin"
+              onClick={handleLinkedIn}
+              disabled={!authConfigured || linkedinLoading || loading}
+            >
               <LinkedInIcon />
-              Continue with LinkedIn
-              <span className="gb-badge">Coming soon</span>
+              {linkedinLoading ? "Opening LinkedIn..." : "Continue with LinkedIn"}
+              {!authConfigured && <span className="gb-badge">Needs Neon</span>}
             </button>
 
             <div className="gb-auth-divider">

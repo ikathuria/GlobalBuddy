@@ -171,6 +171,19 @@ export function AuthProvider({ children }) {
     return { user: nextUser, error: null };
   }, [applySession]);
 
+  const signInWithLinkedIn = useCallback(async () => {
+    if (!neonAuthClient) {
+      return { user: null, error: { message: "LinkedIn sign-in requires Neon Auth to be configured." } };
+    }
+
+    const result = await neonAuthClient.signIn.social({
+      provider: "linkedin",
+      callbackURL: "/dashboard",
+    });
+    if (result?.error) return { user: null, error: authError(result.error) };
+    return { user: null, error: null };
+  }, []);
+
   const signOut = useCallback(async () => {
     if (neonAuthClient) {
       try {
@@ -185,7 +198,16 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, accessToken, loading, authConfigured: neonAuthConfigured, signIn, signUp, signOut }}
+      value={{
+        user,
+        accessToken,
+        loading,
+        authConfigured: neonAuthConfigured,
+        signIn,
+        signUp,
+        signInWithLinkedIn,
+        signOut,
+      }}
     >
       {children}
     </AuthContext.Provider>

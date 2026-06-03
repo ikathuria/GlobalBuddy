@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import client from "../api/client.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 const SUPPORTED_CITIES = [
   { value: "Chicago", label: "Chicago, IL" },
@@ -76,10 +77,39 @@ function ProgressBar({ step }) {
 }
 
 export default function ProfileForm({ onMatch }) {
+  const { accessToken, user } = useAuth();
   const [form, setForm] = useState(defaultProfile);
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [importedFields, setImportedFields] = useState({});
+
+  useEffect(() => {
+    if (!accessToken) {
+      applyAccountPrefill({ full_name: user?.full_name, email: user?.email }, "account");
+    }
+  }, [accessToken, user?.email, user?.full_name]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadLinkedInProfile() {
+      if (!accessToken) return;
+      try {
+        const response = await client.get("/v1/auth/linkedin/profile");
+        if (cancelled) return;
+        const source = response.data?.source === "linkedin" ? "LinkedIn" : "account";
+        applyAccountPrefill(response.data, source);
+      } catch {
+        // Missing LinkedIn claims should not interrupt manual profile setup.
+      }
+    }
+
+    loadLinkedInProfile();
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken]);
 
   const nextStepDisabled = useMemo(() => {
     const requiredFields = STEPS[step].required || [];
@@ -88,6 +118,25 @@ export default function ProfileForm({ onMatch }) {
 
   const update = (key, value) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const applyAccountPrefill = (values = {}, source = "account") => {
+    const allowedFields = ["full_name", "email", "linkedin_url", "country_of_origin", "target_university"];
+    const applied = {};
+    setForm((prev) => {
+      const next = { ...prev };
+      allowedFields.forEach((field) => {
+        const value = values[field];
+        if (value && !String(prev[field] || "").trim()) {
+          next[field] = String(value);
+          applied[field] = source;
+        }
+      });
+      return next;
+    });
+    if (Object.keys(applied).length) {
+      setImportedFields((prev) => ({ ...prev, ...applied }));
+    }
   };
 
   const useSmartStarter = () => {
@@ -99,6 +148,10 @@ export default function ProfileForm({ onMatch }) {
       target_city: prev.target_city || defaultProfile.target_city,
     }));
   };
+
+  const prefillHint = (field) => (
+    importedFields[field] ? <small className="gb-imported-hint">Imported from {importedFields[field]}</small> : null
+  );
 
   const goNext = () => {
     if (nextStepDisabled) {
@@ -191,6 +244,7 @@ export default function ProfileForm({ onMatch }) {
                   required
                 />
                 <small>We use this for mentor introductions.</small>
+                {prefillHint("full_name")}
               </label>
 
               <label className="gb-field">
@@ -204,6 +258,7 @@ export default function ProfileForm({ onMatch }) {
                   required
                 />
                 <small>Only used for connection follow-ups.</small>
+                {prefillHint("email")}
               </label>
 
               <fieldset className="gb-field gb-field--full gb-radio-fieldset">
@@ -244,6 +299,7 @@ export default function ProfileForm({ onMatch }) {
                   required
                 />
                 <small>Used for cultural context and language cues.</small>
+                {prefillHint("country_of_origin")}
               </label>
 
               <label className="gb-field">
@@ -317,6 +373,7 @@ export default function ProfileForm({ onMatch }) {
                   required
                 />
                 <small>This anchors mentor/peer and nearby support matching.</small>
+                {prefillHint("target_university")}
               </label>
 
               <label className="gb-field">
@@ -341,6 +398,7 @@ export default function ProfileForm({ onMatch }) {
                   onChange={(event) => update("linkedin_url", event.target.value)}
                   placeholder="https://www.linkedin.com/in/your-profile"
                 />
+                {prefillHint("linkedin_url")}
               </label>
 
               <label className="gb-field">

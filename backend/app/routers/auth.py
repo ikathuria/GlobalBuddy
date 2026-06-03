@@ -65,12 +65,28 @@ async def linkedin_profile(request: Request) -> dict:
     principal = get_optional_principal(request)
     if principal is None:
         raise HTTPException(status_code=401, detail="Authentication required.")
+    linkedin_url = _claim_value(
+        principal.claims,
+        "linkedin_url",
+        "profile",
+        "publicProfileUrl",
+        "localizedProfileUrl",
+    )
+    full_name = principal.full_name or " ".join(
+        part for part in (
+            _claim_value(principal.claims, "given_name", "first_name"),
+            _claim_value(principal.claims, "family_name", "last_name"),
+        )
+        if part
+    )
+    provider = _claim_value(principal.claims, "provider", "provider_id", "identity_provider", "idp").lower()
     return {
-        "full_name": principal.full_name,
+        "source": "linkedin" if "linkedin" in provider else "account",
+        "full_name": full_name,
         "email": principal.email,
-        "linkedin_url": "",
-        "country_of_origin": "",
-        "target_university": "",
+        "linkedin_url": linkedin_url if "linkedin.com" in linkedin_url else "",
+        "country_of_origin": _claim_value(principal.claims, "country_of_origin", "country"),
+        "target_university": _claim_value(principal.claims, "target_university", "school", "university"),
     }
 
 
@@ -82,3 +98,11 @@ def _serialize_row(row: dict) -> dict:
         else:
             result[key] = str(value) if key == "id" else value
     return result
+
+
+def _claim_value(claims: dict, *keys: str) -> str:
+    for key in keys:
+        value = claims.get(key)
+        if value:
+            return str(value)
+    return ""

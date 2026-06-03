@@ -198,6 +198,20 @@ Requires `Authorization: Bearer <token>`.
 
 Auth is backed by Neon Auth. FastAPI verifies JWTs through the configured Neon Auth JWKS and resolves the app profile in Neon Postgres.
 
+### GET `/v1/auth/linkedin/profile`
+Requires `Authorization: Bearer <token>`. Returns claim-derived prefill fields and never writes profile data by itself.
+
+```json
+{
+  "source": "linkedin",
+  "full_name": "Priya Raman",
+  "email": "priya@example.com",
+  "linkedin_url": "https://www.linkedin.com/in/priya",
+  "country_of_origin": "",
+  "target_university": ""
+}
+```
+
 ## 10. Health Endpoints
 
 ### GET `/health`

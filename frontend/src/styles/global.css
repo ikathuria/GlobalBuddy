@@ -544,6 +544,11 @@ a {
   font-size: 0.78rem;
 }
 
+.gb-field .gb-imported-hint {
+  color: var(--gb-accent-strong);
+  font-weight: 700;
+}
+
 .gb-field input:not([type="radio"]),
 .gb-field select {
   width: 100%;

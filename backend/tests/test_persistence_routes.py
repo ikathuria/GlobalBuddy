@@ -20,3 +20,9 @@ def test_auth_config_reports_neon_provider(api_client: object) -> None:
     response = api_client.get("/v1/auth/config")
     assert response.status_code == 200
     assert response.json()["provider"] == "neon-auth"
+
+
+def test_linkedin_profile_requires_auth(api_client: object) -> None:
+    response = api_client.get("/v1/auth/linkedin/profile")
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required."
