@@ -94,11 +94,11 @@ Relationships are generated from:
 ### Identity and Profile
 - `user_profiles`: `id`, `auth_user_id`, `full_name`, `email`, `country_of_origin`, `target_university`, `target_city`, `stage`, `arrival_date`, `created_at`, `updated_at`
 
-`auth_user_id` references the user identity synced by Neon Auth / Stack Auth.
+`auth_user_id` references the user identity synced by Neon Auth.
 
 ### Progress and Documents
-- `plan_progress`: `id`, `user_id`, `task_id`, `completed`, `updated_at`
-- `user_documents`: `id`, `user_id`, `doc_type`, `status`, `updated_at`
+- `plan_progress`: `user_id`, `task_id`, `completed`, `updated_at`
+- `user_documents`: `user_id`, `doc_type`, `status`, `updated_at`
 
 ### Chat
 - `chat_messages`: `id`, `user_id`, `session_id`, `role`, `content`, `created_at`
@@ -109,7 +109,7 @@ Relationships are generated from:
 
 ### Feed and Saved Content
 - `content_items`: `id`, `type`, `title`, `body`, `city`, `tags`, `author_id`, `published_at`
-- `saved_content`: `id`, `user_id`, `content_id`, `content_source`, `created_at`
+- `saved_content`: `user_id`, `content_id`, `content_source`, `created_at`
 
 ### Mentors
 - `mentor_profiles`: `user_id`, `expertise`, `availability`, `bio`, `response_rate`, `intro_count`, `rating`, `opted_in_at`

@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import client from "../api/client.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 const STORAGE_KEY = "gb_doc_tracker";
 
@@ -57,17 +59,62 @@ function saveState(s) {
 }
 
 export default function DocumentTracker() {
+  const { user, accessToken } = useAuth();
   const [statuses, setStatuses] = useState(loadState);
   const [expanded, setExpanded] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+  const canPersist = Boolean(user && accessToken);
 
-  const advance = (id) => {
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadRemoteStatuses() {
+      try {
+        const response = await client.get("/v1/documents");
+        if (cancelled) return;
+        const next = {};
+        (response.data?.items || []).forEach((item) => {
+          next[item.doc_type] = item.status;
+        });
+        setStatuses(next);
+        setSyncError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setStatuses(loadState());
+        setSyncError(error.response?.data?.detail || "Document sync is unavailable right now.");
+      }
+    }
+
+    if (canPersist) {
+      loadRemoteStatuses();
+    } else {
+      setStatuses(loadState());
+      setSyncError(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canPersist]);
+
+  const advance = async (id) => {
+    const current = statuses[id] || "pending";
+    const nextStatus = STATUS_CYCLE[(STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length];
     setStatuses(prev => {
-      const current = prev[id] || "pending";
-      const next = STATUS_CYCLE[(STATUS_CYCLE.indexOf(current) + 1) % STATUS_CYCLE.length];
-      const updated = { ...prev, [id]: next };
-      saveState(updated);
+      const updated = { ...prev, [id]: nextStatus };
+      if (!canPersist) saveState(updated);
       return updated;
     });
+
+    if (!canPersist) return;
+
+    try {
+      await client.put(`/v1/documents/${encodeURIComponent(id)}`, { status: nextStatus });
+      setSyncError(null);
+    } catch (error) {
+      setSyncError(error.response?.data?.detail || "Unable to save document status.");
+      setStatuses(loadState());
+    }
   };
 
   const doneCount = DOCUMENTS.filter(d => (statuses[d.id] || "pending") === "done").length;
@@ -81,6 +128,8 @@ export default function DocumentTracker() {
       <p className="gb-doc-tracker-hint">
         Tap the status icon to cycle: Pending → In progress → Done.
       </p>
+
+      {syncError && <p className="gb-auth-error" role="alert">{syncError}</p>}
 
       <ul className="gb-doc-list">
         {DOCUMENTS.map(doc => {
@@ -134,7 +183,7 @@ export default function DocumentTracker() {
       </ul>
 
       <p className="gb-dash-note">
-        Status saves in your browser. Supabase sync coming in Milestone 5.
+        {canPersist ? "Status syncs with your account." : "Status saves in your browser."}
       </p>
     </div>
   );

@@ -8,7 +8,7 @@ flowchart LR
   U[Globalदोस्त UI] --> B[FastAPI API]
   B --> KG[Markdown Graph Index]
   B --> DB[(Neon Postgres)]
-  B --> AUTH[Neon Auth / Stack Auth]
+  B --> AUTH[Neon Auth]
   B --> A[AI Provider Layer]
   A --> G[Gemini]
   A --> GR[Groq]
@@ -20,7 +20,7 @@ flowchart LR
 ## 2. Data Boundaries
 - **Markdown graph:** public/static knowledge: cities, universities, tasks, guides, local entities, seed mentors, events, and community groups.
 - **Neon Postgres:** private/dynamic app data: user profiles, plan progress, document status, chat history, connections, mentor opt-ins, saved content, and notifications.
-- **Neon Auth / Stack Auth:** identity, sessions, OAuth, and synced auth users.
+- **Neon Auth:** identity, sessions, OAuth, and synced auth users.
 - **Neo4j:** optional legacy adapter or future upgrade path when relationship data becomes highly dynamic.
 
 ## 3. Product Journey Architecture

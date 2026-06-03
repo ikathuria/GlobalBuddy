@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import client from "../api/client.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import CulturalBridgeDrawer from "./CulturalBridgeDrawer.jsx";
 
 const QUICK_TERMS = ["security deposit", "credit score", "SSN"];
@@ -13,6 +14,15 @@ function weekLabel(dayRange, index) {
 
 function stepId(step, index) {
   return `${index}:${step.day_range}:${step.action}`;
+}
+
+function progressTaskId(step, index) {
+  const sourceIds = Array.isArray(step.source_node_ids) ? step.source_node_ids : [];
+  if (sourceIds[0]) return sourceIds[0];
+  return `generated-${index}-${String(step.day_range || "")}-${String(step.action || "")}`
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 function storageKey(sessionId) {
@@ -37,20 +47,51 @@ function saveProgress(sessionId, value) {
 }
 
 export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocusNode, onOpenExplore }) {
+  const { user, accessToken } = useAuth();
   const [plan, setPlan] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [loadingBridge, setLoadingBridge] = useState(false);
   const [planError, setPlanError] = useState(null);
+  const [progressError, setProgressError] = useState(null);
   const [bridgeError, setBridgeError] = useState(null);
   const [term, setTerm] = useState("security deposit");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [bridge, setBridge] = useState(null);
   const [expandedStepIds, setExpandedStepIds] = useState({});
   const [completed, setCompleted] = useState(() => readProgress(sessionId));
+  const canPersistProgress = Boolean(user && accessToken);
 
   useEffect(() => {
-    setCompleted(readProgress(sessionId));
-  }, [sessionId]);
+    let cancelled = false;
+
+    async function loadRemoteProgress() {
+      try {
+        const response = await client.get("/v1/progress/plan");
+        if (cancelled) return;
+        const next = {};
+        (response.data?.items || []).forEach((item) => {
+          next[item.task_id] = Boolean(item.completed);
+        });
+        setCompleted(next);
+        setProgressError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setCompleted(readProgress(sessionId));
+        setProgressError(error.response?.data?.detail || "Plan progress sync is unavailable right now.");
+      }
+    }
+
+    if (canPersistProgress) {
+      loadRemoteProgress();
+    } else {
+      setCompleted(readProgress(sessionId));
+      setProgressError(null);
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [canPersistProgress, sessionId]);
 
   useEffect(() => {
     onPlanReady?.(plan);
@@ -70,7 +111,7 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
   const completionSummary = useMemo(() => {
     const steps = plan?.steps || [];
     if (!steps.length) return { done: 0, total: 0 };
-    const done = steps.reduce((count, step, index) => count + (completed[stepId(step, index)] ? 1 : 0), 0);
+    const done = steps.reduce((count, step, index) => count + (completed[progressTaskId(step, index)] ? 1 : 0), 0);
     return { done, total: steps.length };
   }, [plan?.steps, completed]);
 
@@ -132,13 +173,24 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
     explainTerm(term);
   }
 
-  function toggleComplete(step, index) {
-    const id = stepId(step, index);
+  async function toggleComplete(step, index) {
+    const id = progressTaskId(step, index);
+    const nextValue = !completed[id];
     setCompleted((previous) => {
-      const next = { ...previous, [id]: !previous[id] };
-      saveProgress(sessionId, next);
+      const next = { ...previous, [id]: nextValue };
+      if (!canPersistProgress) saveProgress(sessionId, next);
       return next;
     });
+
+    if (!canPersistProgress) return;
+
+    try {
+      await client.put(`/v1/progress/plan/${encodeURIComponent(id)}`, { completed: nextValue });
+      setProgressError(null);
+    } catch (error) {
+      setCompleted((previous) => ({ ...previous, [id]: !nextValue }));
+      setProgressError(error.response?.data?.detail || "Unable to save plan progress.");
+    }
   }
 
   function toggleExpand(step, index) {
@@ -224,6 +276,8 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
         </div>
       )}
 
+      {progressError && <div className="gb-error">{progressError}</div>}
+
       {plan && !loadingPlan && (
         <section className="gb-plan-timeline" aria-label="30-day timeline">
           <div className="gb-plan-summary">
@@ -246,7 +300,8 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
 
               <div className="gb-week-tasks">
                 {items.map(({ step, index, id }) => {
-                  const isDone = Boolean(completed[id]);
+                  const progressId = progressTaskId(step, index);
+                  const isDone = Boolean(completed[progressId]);
                   const expanded = Boolean(expandedStepIds[id]);
                   const sourceIds = Array.isArray(step.source_node_ids) ? step.source_node_ids : [];
 

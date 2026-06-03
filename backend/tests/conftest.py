@@ -18,6 +18,11 @@ os.environ.setdefault("ROCKETRIDE_URI", "")
 os.environ.setdefault("ROCKETRIDE_APIKEY", "")
 os.environ.setdefault("ANTHROPIC_API_KEY", "")
 os.environ.setdefault("CORS_ORIGINS", "http://localhost:5173")
+os.environ["DATABASE_URL"] = ""
+os.environ["DATABASE_URL_UNPOOLED"] = ""
+os.environ["NEON_AUTH_URL"] = ""
+os.environ["NEON_AUTH_JWKS_URL"] = ""
+os.environ["AUTH_REQUIRED"] = "false"
 
 
 @pytest.fixture(autouse=True)

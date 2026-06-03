@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import PreArrivalPage from "./pages/PreArrivalPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
+import PublicProfilePage from "./pages/PublicProfilePage.jsx";
 
 class ErrorBoundary extends Component {
   constructor(props) {
@@ -54,6 +55,7 @@ export default function App() {
           <Route path="/onboarding" element={<Navigate to="/" replace />} />
           <Route path="/auth" element={<AuthPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/profile/:id" element={<PublicProfilePage />} />
           <Route path="/pre-arrival" element={<PreArrivalPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />

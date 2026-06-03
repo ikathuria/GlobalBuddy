@@ -71,7 +71,7 @@ Globalदोस्त captures arrival context, builds Markdown-graph-backed rec
 - REST endpoints under `/v1` for profile, plan, bridge, graph, chat, auth, and future social/feed features.
 - Health endpoints at `/health`, `/health/providers`, and target `/health/graph`.
 - Neon Postgres via backend repository layer.
-- Neon Auth / Stack Auth JWT verification through JWKS.
+- Neon Auth JWT verification through JWKS.
 - Provider calls through backend abstraction layer.
 - Legacy Neo4j adapter may remain available during migration but is not required for the target MVP.
 

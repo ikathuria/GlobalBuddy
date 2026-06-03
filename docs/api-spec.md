@@ -3,8 +3,8 @@
 ## 1. API Conventions
 - Base path: `/v1`
 - Content type: `application/json`
-- Health endpoints live at root: `/health`, `/health/providers`, target `/health/graph`
-- Protected routes use `Authorization: Bearer <token>` after Neon Auth integration
+- Health endpoints live at root: `/health`, `/health/providers`, `/health/graph`, `/health/db`
+- Protected routes use `Authorization: Bearer <token>` when Neon Auth persistence is enabled
 
 ## 2. POST `/v1/profile/match`
 Runs profile matching, local-intelligence ranking, and session creation from graph evidence.
@@ -130,7 +130,7 @@ Returns session-scoped graph for UI visualization.
 ```
 
 ## 6. POST `/v1/chat/message`
-Sends a persistent chat message. Before Neon persistence is enabled, chat may use session-local history.
+Sends a chat message. Authenticated users sync chat history to Neon Postgres; public/no-DB sessions use in-memory history.
 
 ### Request
 ```json
@@ -149,15 +149,56 @@ Sends a persistent chat message. Before Neon persistence is enabled, chat may us
 }
 ```
 
-## 7. Auth Endpoints (Target)
-- `POST /v1/auth/signup`
-- `POST /v1/auth/login`
+## 7. Progress Endpoints
+
+### GET `/v1/progress/plan`
+Requires `Authorization: Bearer <token>`.
+
+```json
+{
+  "items": [
+    { "task_id": "task_open_bank_account", "completed": true, "updated_at": "2026-06-03T12:00:00+00:00" }
+  ]
+}
+```
+
+### PUT `/v1/progress/plan/{task_id}`
+Requires `Authorization: Bearer <token>`.
+
+```json
+{ "completed": true }
+```
+
+## 8. Document Endpoints
+
+### GET `/v1/documents`
+Requires `Authorization: Bearer <token>`.
+
+```json
+{
+  "items": [
+    { "doc_type": "ssn", "status": "in_progress", "updated_at": "2026-06-03T12:00:00+00:00" }
+  ]
+}
+```
+
+### PUT `/v1/documents/{doc_type}`
+Requires `Authorization: Bearer <token>`.
+
+```json
+{ "status": "done" }
+```
+
+## 9. Auth Endpoints
+- `GET /v1/auth/config`
 - `GET /v1/auth/me`
 - `GET /v1/auth/linkedin/profile`
+- `POST /v1/auth/signup` returns `501`; use the Neon Auth frontend SDK on `/auth`
+- `POST /v1/auth/login` returns `501`; use the Neon Auth frontend SDK on `/auth`
 
-Auth is backed by Neon Auth / Stack Auth. FastAPI verifies JWTs through the Stack Auth JWKS and resolves the app profile in Neon Postgres.
+Auth is backed by Neon Auth. FastAPI verifies JWTs through the configured Neon Auth JWKS and resolves the app profile in Neon Postgres.
 
-## 8. Health Endpoints
+## 10. Health Endpoints
 
 ### GET `/health`
 ```json
@@ -182,6 +223,11 @@ Auth is backed by Neon Auth / Stack Auth. FastAPI verifies JWTs through the Stac
   "edge_count": 456,
   "validation_errors": []
 }
+```
+
+### GET `/health/db`
+```json
+{ "status": "ok" }
 ```
 
 ### GET `/health/neo4j` (Legacy)

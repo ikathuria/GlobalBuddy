@@ -17,7 +17,7 @@ Motto: *You didn't come this far to figure it out alone.*
 - **Step 2 - AI Plan (first 30 days)**
   - Calls `POST /v1/plan/generate` with session-backed evidence.
   - Week-grouped timeline, best next action, warning surface, and provider/fallback metadata.
-  - Task completion is persisted per session in browser local storage.
+  - Task completion syncs to Neon `plan_progress` for logged-in users, with browser local storage as the no-auth fallback.
   - Each plan step can focus related graph nodes.
 
 - **Step 3 - Explore Knowledge Graph**
@@ -33,6 +33,7 @@ Motto: *You didn't come this far to figure it out alone.*
 - **System status checks**
   - UI probes `GET /health` and, after the Markdown migration, `GET /health/graph`.
   - Shows API live/offline state and graph-source health with retry.
+  - Backend exposes `GET /health/db` for Neon Postgres connectivity.
 
 ## Backend stack
 
@@ -53,8 +54,15 @@ Motto: *You didn't come this far to figure it out alone.*
 - `POST /v1/plan/generate`
 - `POST /v1/bridge/explain`
 - `GET /v1/graph/subgraph?session_id=...`
+- `GET /v1/auth/config`
+- `GET /v1/auth/me`
+- `GET /v1/progress/plan`
+- `PUT /v1/progress/plan/{task_id}`
+- `GET /v1/documents`
+- `PUT /v1/documents/{doc_type}`
 - `GET /health`
 - `GET /health/graph` (target)
+- `GET /health/db`
 - `GET /health/neo4j` (legacy during migration)
 
 ## Environment variables
@@ -65,10 +73,11 @@ Copy `backend/.env.example` to `backend/.env`.
 |---|---|
 | `DATABASE_URL` | Neon pooled Postgres connection string |
 | `DATABASE_URL_UNPOOLED` | Neon direct connection string for migrations |
-| `STACK_PROJECT_ID` | Neon Auth / Stack Auth project id |
-| `STACK_PUBLISHABLE_CLIENT_KEY` | Neon Auth publishable key |
-| `STACK_SECRET_SERVER_KEY` | Neon Auth server secret |
-| `STACK_JWKS_URL` | JWKS URL for backend JWT verification |
+| `NEON_AUTH_URL` | Neon Auth service URL |
+| `NEON_AUTH_JWKS_URL` | JWKS URL for backend JWT verification |
+| `NEON_AUTH_ISSUER` | Optional expected JWT issuer |
+| `NEON_AUTH_AUDIENCE` | Optional expected JWT audience |
+| `AUTH_REQUIRED` | Set `true` to enforce JWT auth on protected API routes |
 | `AI_PROVIDER` | `auto`, `gemini`, `rocketride_sdk`, `rocketride_http`, `anthropic` |
 | `GEMINI_API_KEY` | Gemini key (recommended path) |
 | `GEMINI_MODEL` | Gemini model id (default `gemini-2.0-flash`) |
@@ -81,7 +90,7 @@ Copy `backend/.env.example` to `backend/.env`.
 | `ANTHROPIC_API_KEY` | Anthropic key |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
 
-Legacy Neo4j variables may still be used by the current adapter until Milestone 4 in [PLAN.md](./PLAN.md) is implemented.
+Legacy Neo4j variables may still be used by the optional adapter. The default graph source is Markdown.
 
 Validation rule: at least one provider path must be configured (`GEMINI_API_KEY`, RocketRide SDK pair, RocketRide HTTP pair, or `ANTHROPIC_API_KEY`).
 
@@ -97,6 +106,14 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
+Run Neon migrations after adding `DATABASE_URL_UNPOOLED` or `DATABASE_URL`:
+
+```bash
+cd backend
+source .venv/bin/activate
+python -m app.db.migrate
+```
+
 Run API:
 
 ```bash
@@ -109,7 +126,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 Target graph data lives under `data/graph/{city}/...` as Markdown files. Each file has YAML frontmatter for typed properties and `[[wikilinks]]` for graph edges.
 
-Until the Markdown graph engine is implemented, the legacy Neo4j seed command is still available:
+The legacy Neo4j seed command remains available only for optional adapter work:
 
 ```bash
 cd backend
@@ -123,10 +140,11 @@ python -m app.db.seed_data
 cd frontend
 npm install
 echo 'VITE_API_BASE_URL=http://127.0.0.1:8000' > .env.local
+echo 'VITE_NEON_AUTH_URL=' >> .env.local
 npm run dev
 ```
 
-Optional: set `VITE_API_TIMEOUT_MS` (default `180000`).
+Optional: set `VITE_NEON_AUTH_URL` when Neon Auth is enabled and `VITE_API_TIMEOUT_MS` (default `180000`).
 
 ## Demo flow
 

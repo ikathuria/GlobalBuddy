@@ -1,11 +1,11 @@
-"""Auth router — stub wired for Milestone 5 (LinkedIn OAuth) and Milestone 4 (Supabase Auth).
+"""Auth router for Neon Auth metadata and current-user resolution."""
 
-Endpoints here will delegate to Supabase Auth once SUPABASE_URL and
-SUPABASE_SERVICE_ROLE_KEY are configured. Until then they return 501.
-"""
-
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
+
+from app.auth import get_optional_principal, require_principal
+from app.config import get_settings
+from app.db import repositories
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -21,25 +21,64 @@ class SignInRequest(BaseModel):
     password: str
 
 
+@router.get("/config")
+async def auth_config() -> dict:
+    settings = get_settings()
+    return {
+        "provider": "neon-auth",
+        "configured": bool(settings.neon_auth_url.strip()),
+        "auth_required": settings.auth_required,
+    }
+
+
+@router.get("/me")
+async def me(request: Request) -> dict:
+    db = request.app.state.db
+    principal = require_principal(request)
+    if db.enabled:
+        profile = await repositories.get_or_create_profile_from_claims(db, principal.claims)
+        return {
+            "claims": principal.claims,
+            "profile": _serialize_row(profile),
+        }
+    return {"claims": principal.claims, "profile": None}
+
+
 @router.post("/signup")
 async def signup(payload: SignUpRequest) -> dict:
-    # TODO (Milestone 4): delegate to supabase.auth.admin.create_user(...)
-    raise HTTPException(status_code=501, detail="Supabase Auth not yet configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
+    raise HTTPException(
+        status_code=501,
+        detail="Use the Neon Auth client on /auth for signup. Backend password proxying is intentionally disabled.",
+    )
 
 
 @router.post("/login")
 async def login(payload: SignInRequest) -> dict:
-    # TODO (Milestone 4): delegate to supabase.auth.sign_in_with_password(...)
-    raise HTTPException(status_code=501, detail="Supabase Auth not yet configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.")
+    raise HTTPException(
+        status_code=501,
+        detail="Use the Neon Auth client on /auth for login. Backend password proxying is intentionally disabled.",
+    )
 
 
-@router.get("/linkedin")
-async def linkedin_oauth_start() -> dict:
-    # TODO (Milestone 5): redirect to Supabase LinkedIn OAuth URL
-    raise HTTPException(status_code=501, detail="LinkedIn OAuth not yet configured. Set LINKEDIN_CLIENT_ID and LINKEDIN_CLIENT_SECRET.")
+@router.get("/linkedin/profile")
+async def linkedin_profile(request: Request) -> dict:
+    principal = get_optional_principal(request)
+    if principal is None:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    return {
+        "full_name": principal.full_name,
+        "email": principal.email,
+        "linkedin_url": "",
+        "country_of_origin": "",
+        "target_university": "",
+    }
 
 
-@router.get("/linkedin/callback")
-async def linkedin_oauth_callback(code: str = "", state: str = "", error: str = "") -> dict:
-    # TODO (Milestone 5): exchange code via Supabase, return user + pre-fill data
-    raise HTTPException(status_code=501, detail="LinkedIn OAuth callback not yet implemented.")
+def _serialize_row(row: dict) -> dict:
+    result = dict(row)
+    for key, value in list(result.items()):
+        if hasattr(value, "isoformat"):
+            result[key] = value.isoformat()
+        else:
+            result[key] = str(value) if key == "id" else value
+    return result

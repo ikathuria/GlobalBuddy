@@ -33,10 +33,17 @@ class Settings(BaseSettings):
     # Target Neon persistence/auth settings.
     database_url: str = Field(default="", description="Neon pooled Postgres connection string")
     database_url_unpooled: str = Field(default="", description="Neon direct connection string for migrations")
-    stack_project_id: str = Field(default="", description="Neon Auth / Stack Auth project id")
-    stack_publishable_client_key: str = Field(default="", description="Neon Auth publishable key")
-    stack_secret_server_key: str = Field(default="", description="Neon Auth server secret")
-    stack_jwks_url: str = Field(default="", description="Stack Auth JWKS URL")
+    neon_auth_url: str = Field(default="", description="Neon Auth URL")
+    neon_auth_jwks_url: str = Field(default="", description="JWKS URL for Neon Auth JWT verification")
+    neon_auth_issuer: str = Field(default="", description="Optional expected JWT issuer")
+    neon_auth_audience: str = Field(default="", description="Optional expected JWT audience")
+    auth_required: bool = Field(default=False, description="Require JWTs on protected API routes")
+
+    # Legacy Stack Auth names remain accepted for older local .env files.
+    stack_project_id: str = Field(default="", description="Legacy Stack Auth project id")
+    stack_publishable_client_key: str = Field(default="", description="Legacy Stack Auth publishable key")
+    stack_secret_server_key: str = Field(default="", description="Legacy Stack Auth server secret")
+    stack_jwks_url: str = Field(default="", description="Legacy Stack Auth JWKS URL")
 
     # AI providers.
     ai_provider: str = Field(
@@ -112,6 +119,18 @@ class Settings(BaseSettings):
     @property
     def neo4j_enabled(self) -> bool:
         return bool(self.neo4j_uri.strip() and self.neo4j_user.strip() and self.neo4j_password.strip())
+
+    @property
+    def postgres_enabled(self) -> bool:
+        return bool(self.database_url.strip())
+
+    @property
+    def jwt_jwks_url(self) -> str:
+        return self.neon_auth_jwks_url.strip() or self.stack_jwks_url.strip()
+
+    @property
+    def auth_enforced(self) -> bool:
+        return bool(self.auth_required and self.jwt_jwks_url)
 
     @model_validator(mode="after")
     def require_llm_backend(self) -> "Settings":

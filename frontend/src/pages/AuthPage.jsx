@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext.jsx";
 
 export default function AuthPage() {
   const { signIn, signUp, user } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode] = useState("login"); // "login" | "signup"
+  const [mode, setMode] = useState("login");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Already logged in — redirect away
-  if (user) {
-    navigate("/dashboard", { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (user) navigate("/dashboard", { replace: true });
+  }, [navigate, user]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  if (user) return null;
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
     setError(null);
     setLoading(true);
     try {
@@ -32,7 +32,7 @@ export default function AuthPage() {
       if (result.error) {
         setError(result.error.message || "Something went wrong.");
       } else {
-        navigate("/dashboard");
+        navigate(mode === "signup" ? "/onboarding" : "/dashboard");
       }
     } catch (err) {
       setError(err.message || "Something went wrong.");
@@ -54,6 +54,7 @@ export default function AuthPage() {
         <div className="gb-card gb-auth-card">
           <div className="gb-auth-tabs" role="tablist">
             <button
+              type="button"
               role="tab"
               aria-selected={mode === "login"}
               className={`gb-auth-tab ${mode === "login" ? "gb-auth-tab--active" : ""}`}
@@ -62,6 +63,7 @@ export default function AuthPage() {
               Log in
             </button>
             <button
+              type="button"
               role="tab"
               aria-selected={mode === "signup"}
               className={`gb-auth-tab ${mode === "signup" ? "gb-auth-tab--active" : ""}`}
@@ -76,7 +78,6 @@ export default function AuthPage() {
               {mode === "signup" ? "Create your account" : "Welcome back"}
             </p>
 
-            {/* LinkedIn OAuth — wired in Milestone 5 */}
             <button type="button" className="gb-btn gb-btn-linkedin" disabled>
               <LinkedInIcon />
               Continue with LinkedIn
@@ -94,7 +95,7 @@ export default function AuthPage() {
                   <input
                     type="text"
                     value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
+                    onChange={(event) => setFullName(event.target.value)}
                     required
                     autoComplete="name"
                     placeholder="Priya Sharma"
@@ -107,7 +108,7 @@ export default function AuthPage() {
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(event) => setEmail(event.target.value)}
                   required
                   autoComplete="email"
                   placeholder="priya@example.com"
@@ -119,7 +120,7 @@ export default function AuthPage() {
                 <input
                   type="password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                   autoComplete={mode === "signup" ? "new-password" : "current-password"}
                   placeholder="••••••••"
@@ -130,22 +131,22 @@ export default function AuthPage() {
               {error && <p className="gb-auth-error" role="alert">{error}</p>}
 
               <button type="submit" className="gb-btn gb-btn-primary gb-btn-full" disabled={loading}>
-                {loading ? "Please wait…" : mode === "signup" ? "Create account" : "Log in"}
+                {loading ? "Please wait..." : mode === "signup" ? "Create account" : "Log in"}
               </button>
             </form>
 
             <p className="gb-auth-footer-note">
               {mode === "login" ? (
-                <>No account? <button className="gb-link-btn" onClick={() => setMode("signup")}>Sign up free</button></>
+                <>No account? <button type="button" className="gb-link-btn" onClick={() => setMode("signup")}>Sign up free</button></>
               ) : (
-                <>Already have an account? <button className="gb-link-btn" onClick={() => setMode("login")}>Log in</button></>
+                <>Already have an account? <button type="button" className="gb-link-btn" onClick={() => setMode("login")}>Log in</button></>
               )}
             </p>
           </div>
         </div>
 
         <p className="gb-auth-skip">
-          <Link to="/">Continue without an account →</Link>
+          <Link to="/">Continue without an account -&gt;</Link>
         </p>
       </div>
     </div>

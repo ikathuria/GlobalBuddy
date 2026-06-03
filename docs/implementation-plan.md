@@ -35,11 +35,11 @@ Neo4j remains optional as a future graph-database adapter if the relationship la
 
 ### Phase B: Neon Auth and Persistence
 1. Add Postgres migration tooling and repository layer.
-2. Configure Neon project and Neon Auth / Stack Auth keys.
+2. Configure Neon project and Neon Auth URLs/JWKS.
 3. Integrate `/auth` with Neon Auth.
-4. Verify JWTs in FastAPI through Stack Auth JWKS.
+4. Verify JWTs in FastAPI through Neon Auth JWKS.
 5. Create app tables for profiles, plan progress, documents, chat, connections, content, mentors, and notifications.
-6. Migrate plan completion and document tracker state out of localStorage.
+6. Migrate plan completion and document tracker state out of localStorage for authenticated users.
 
 ### Phase C: Product Expansion
 1. Convert Boston and NYC graph data to Markdown.

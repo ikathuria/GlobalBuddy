@@ -4,14 +4,17 @@ import logging
 import time
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
+from app.auth import bearer_token_from_header, is_public_api_path, verify_jwt_token
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
-from app.routers import auth, bridge, chat, graph, plan, pre_arrival, profile
+from app.db.postgres import PostgresDatabase
+from app.routers import auth, bridge, chat, documents, graph, plan, pre_arrival, profile, progress
 from app.services.markdown_graph import MarkdownGraphService
 
 _telemetry_logger = logging.getLogger("app.telemetry")
@@ -42,6 +45,25 @@ class _RequestTelemetryMiddleware(BaseHTTPMiddleware):
             raise
 
 
+class _AuthMiddleware(BaseHTTPMiddleware):
+    """Attach optional JWT principal and enforce protected API routes when configured."""
+
+    async def dispatch(self, request: Request, call_next: object) -> Response:
+        settings = get_settings()
+        token = bearer_token_from_header(request.headers.get("Authorization"))
+        if token and settings.jwt_jwks_url:
+            try:
+                request.state.user = verify_jwt_token(token, settings)
+            except HTTPException as exc:
+                return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+
+        if settings.auth_enforced and not is_public_api_path(request.url.path):
+            if not getattr(request.state, "user", None):
+                return JSONResponse(status_code=401, content={"detail": "Authentication required."})
+
+        return await call_next(request)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
@@ -59,7 +81,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         )
         await neo4j.connect()
     app.state.neo4j_client = neo4j
+    db = PostgresDatabase(settings)
+    await db.connect()
+    app.state.db = db
     yield
+    await db.close()
     if neo4j is not None:
         await neo4j.close()
 
@@ -71,6 +97,7 @@ def create_app() -> FastAPI:
     # Regex covers localhost / 127.0.0.1 / [::1] with any port (browser Origin must match for CORS).
     _local_origin_regex = r"https?://(localhost|127\.0\.0\.1|\[::1\])(:\d+)?"
     app.add_middleware(_RequestTelemetryMiddleware)
+    app.add_middleware(_AuthMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins_list,
@@ -82,6 +109,8 @@ def create_app() -> FastAPI:
 
     app.include_router(auth.router)
     app.include_router(chat.router)
+    app.include_router(documents.router)
+    app.include_router(progress.router)
     app.include_router(pre_arrival.router)
     app.include_router(profile.router)
     app.include_router(plan.router)
@@ -158,6 +187,14 @@ def create_app() -> FastAPI:
                 "validation_errors": [],
             }
         return graph_service.health()
+
+    @app.get("/health/db", tags=["system"])
+    async def health_db(request: Request) -> dict:
+        db = request.app.state.db
+        if not db.enabled:
+            return {"status": "not_configured"}
+        ok = await db.ping()
+        return {"status": "ok" if ok else "error"}
 
     @app.get("/health/neo4j", tags=["system"])
     async def health_neo4j(request: Request) -> dict[str, str | int | None]:

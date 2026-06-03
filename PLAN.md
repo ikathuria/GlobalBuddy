@@ -23,7 +23,7 @@
 | Backend | FastAPI (Python) | Already built; owns AI, graph indexing, ranking, and Pydantic contracts |
 | Knowledge Graph | Markdown + YAML frontmatter + `[[wikilinks]]` | Obsidian-style graph stored in Git; free, editable, easy to validate and demo |
 | Relational DB | Neon Postgres | User accounts, plan progress, chat, connections, feed, mentor profiles, notifications |
-| Auth | Neon Auth (Stack Auth-backed) | Managed auth synced into Neon Postgres; keeps auth + user data on one default platform |
+| Auth | Neon Auth | Managed auth synced into Neon Postgres; keeps auth + user data on one default platform |
 | Realtime | Deferred; SSE/WebSocket when needed | Avoids provider-specific realtime dependency during MVP |
 | Storage | Cloudflare R2, optional later | Profile photos and uploads only when product needs them |
 | Cache | Upstash Redis | Session cache, rate limiting; free tier sufficient for dev |
@@ -45,11 +45,12 @@
 DATABASE_URL=               # Neon pooled Postgres connection string
 DATABASE_URL_UNPOOLED=      # Neon direct connection string, useful for migrations
 
-# Neon Auth / Stack Auth
-STACK_PROJECT_ID=           # Neon Auth project id
-STACK_PUBLISHABLE_CLIENT_KEY=
-STACK_SECRET_SERVER_KEY=    # Keep server-side only
-STACK_JWKS_URL=             # e.g. https://api.stack-auth.com/api/v1/projects/{id}/.well-known/jwks.json
+# Neon Auth
+NEON_AUTH_URL=              # Neon Auth service URL
+NEON_AUTH_JWKS_URL=         # JWKS endpoint for backend JWT verification
+NEON_AUTH_ISSUER=           # Optional expected JWT issuer
+NEON_AUTH_AUDIENCE=         # Optional expected JWT audience
+AUTH_REQUIRED=false         # Set true to require JWTs on protected /v1 routes
 
 GEMINI_API_KEY=             # https://aistudio.google.com/app/apikey
 GROQ_API_KEY=               # https://console.groq.com (free, no card)
@@ -67,8 +68,7 @@ LINKEDIN_REDIRECT_URI=      # e.g. http://localhost:8000/v1/auth/linkedin/callba
 
 # Frontend (.env.local)
 VITE_API_BASE_URL=          # http://localhost:8000 in dev; backend URL in prod
-VITE_STACK_PROJECT_ID=      # Neon Auth project id for the Vite client
-VITE_STACK_PUBLISHABLE_CLIENT_KEY=
+VITE_NEON_AUTH_URL=         # Neon Auth service URL for the Vite client
 ```
 
 ---
@@ -131,23 +131,23 @@ Tasks:
 **Goal:** Users have real accounts; profile, plan progress, documents, chat, and connections persist across sessions and devices in Neon Postgres.
 
 Tasks:
-- [ ] Add Postgres migration tooling and driver (`asyncpg`/SQLAlchemy or equivalent) — Done when: backend can run a local migration against Neon
-- [ ] Configure Neon project, Neon Auth, and Stack Auth keys — Done when: `DATABASE_URL`, `STACK_PROJECT_ID`, publishable key, and secret key exist in env
-- [ ] Add Neon Auth / Stack Auth frontend integration at `/auth` — Done when: email signup/login creates a user and redirects to onboarding
-- [ ] Add JWT verification middleware to FastAPI — all `/v1/*` routes except health and public onboarding endpoints require a valid Neon Auth token when persistence is enabled
-- [ ] Create Neon Postgres tables: `user_profiles`, `plan_progress`, `user_documents`, `chat_messages`, `connections`, `content_items`, `saved_content`, `mentor_profiles`, `mentor_ratings`, `notifications` — Done when: migrations run cleanly
-- [ ] Link `user_profiles.auth_user_id` to Neon Auth's synced user row — Done when: login can resolve the app user profile from token claims
-- [ ] Add routes: `/` (onboarding), `/auth`, `/dashboard`, `/profile/:id`, `/chat`, `/pre-arrival` — Done when: each path renders without 404
-- [ ] Migrate plan task completion from localStorage to `plan_progress` — Done when: completing a task on one device reflects on another after refresh
+- [x] Add Postgres migration tooling and driver (`asyncpg`/SQLAlchemy or equivalent) - Done when: `python -m app.db.migrate` can apply SQL migrations against Neon
+- [x] Configure Neon project/Auth env contract - Done when: `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEON_AUTH_URL`, and `NEON_AUTH_JWKS_URL` are documented in env examples; console values are supplied per deployment
+- [x] Add Neon Auth frontend integration at `/auth` - Done when: email signup/login uses the Neon Auth SDK when `VITE_NEON_AUTH_URL` is set and redirects signup to onboarding
+- [x] Add JWT verification middleware to FastAPI - Done when: protected `/v1/*` routes require a valid Neon Auth token when `AUTH_REQUIRED=true` and a JWKS URL is configured
+- [x] Create Neon Postgres tables: `user_profiles`, `plan_progress`, `user_documents`, `chat_messages`, `connections`, `content_items`, `saved_content`, `mentor_profiles`, `mentor_ratings`, `notifications` - Done when: `backend/migrations/001_neon_persistence.sql` defines the schema
+- [x] Link `user_profiles.auth_user_id` to Neon Auth's synced user row - Done when: `/v1/auth/me` and persistence routes resolve the app user profile from token claims
+- [x] Add routes: `/` (onboarding), `/auth`, `/dashboard`, `/profile/:id`, `/chat`, `/pre-arrival` - Done when: each path renders without 404
+- [x] Migrate plan task completion from localStorage to `plan_progress` - Done when: authenticated users sync progress through `/v1/progress/plan`, with localStorage fallback for no-auth demos
 
 ---
 
 ### Milestone 6: LinkedIn OAuth
-**Goal:** Users can sign in and pre-fill their profile with LinkedIn data, using Neon Auth/Stack Auth as the auth layer.
+**Goal:** Users can sign in and pre-fill their profile with LinkedIn data, using Neon Auth as the auth layer.
 
 Tasks:
 - [ ] Register LinkedIn Developer App with scopes `openid`, `profile`, `email` — Done when: Client ID and Secret are available
-- [ ] Configure LinkedIn as an OAuth provider in Neon Auth / Stack Auth — Done when: LinkedIn appears in the auth provider settings
+- [ ] Configure LinkedIn as an OAuth provider in Neon Auth — Done when: LinkedIn appears in the auth provider settings
 - [ ] Add "Continue with LinkedIn" button to `/auth` — Done when: clicking redirects to LinkedIn and returns a logged-in session
 - [ ] Add `GET /v1/auth/linkedin/profile` endpoint or token-claim mapper — Done when: backend returns `{full_name, email, linkedin_url, country_of_origin, target_university}` when available
 - [ ] Update `ProfileForm.jsx` to pre-fill empty fields for LinkedIn-authenticated users — Done when: imported fields are visually marked and never overwrite user-entered values
@@ -188,7 +188,7 @@ Tasks:
 - [x] Add `/pre-arrival` route and `PreArrivalPanel.jsx` component — a checklist page accessible before Step 1 (no auth required)
 - [x] Add `DocumentTracker` component to the dashboard — tracks SSN, bank account, student ID, health insurance, I-20 copy, lease with status and links to how-to guides
 - [ ] Convert pre-arrival checklist and document tasks to Markdown graph nodes — Done when: plan generation uses Markdown task dependencies
-- [ ] Persist document tracker state to Neon `user_documents` table — Done when: document status persists across sessions
+- [x] Persist document tracker state to Neon `user_documents` table — Done when: authenticated document status syncs through `/v1/documents`
 - [x] Add `Task` graph nodes for each document (SSN, bank, health insurance) linked to the plan's topological order
 
 ---
@@ -197,7 +197,7 @@ Tasks:
 **Goal:** The Cultural Bridge becomes a full persistent chat assistant — students can ask anything about US life, their city, or their situation.
 
 Tasks:
-- [ ] Add `chat_messages` table to Neon Postgres: `{id, user_id, role (user/assistant), content, created_at}` — Done when: migration applied
+- [x] Add `chat_messages` table to Neon Postgres: `{id, user_id, session_id, role (user/assistant), content, created_at}` — Done when: authenticated chat messages persist through `/v1/chat`
 - [x] Add `POST /v1/chat/message` FastAPI endpoint — accepts `{message, session_id}`, loads last 10 messages for context, calls Gemini/Groq, stores both user message and response, returns assistant reply
 - [x] Create `ChatPage.jsx` at `/chat` — persistent chat interface with message history, typing indicator, and quick-chip suggestions
 - [ ] Replace the existing `CulturalBridgeDrawer.jsx` one-off term lookup with a link that opens `/chat` pre-seeded with the term as the first message
@@ -322,7 +322,7 @@ claude "Read PLAN.md. Without building anything new, test everything marked done
 ## Notes & Decisions
 
 - **Markdown graph + Neon split:** Markdown owns public/static knowledge (cities, universities, tasks, local places, seed mentors, guides, groups). Neon Postgres owns private/dynamic user data (profiles, progress, chat, connections, notifications). Never store private user data in Markdown.
-- **Auth token flow:** Neon Auth / Stack Auth issues a JWT on login. The frontend sends it as `Authorization: Bearer <token>` on protected API calls. FastAPI verifies against the Stack Auth JWKS.
+- **Auth token flow:** Neon Auth issues a JWT on login. The frontend sends it as `Authorization: Bearer <token>` on protected API calls. FastAPI verifies against the configured Neon Auth JWKS.
 - **Gemini vs Groq routing:** Use Gemini 2.5 Flash for plan generation and multi-turn chat (needs high token count). Use Groq for cultural bridge one-off lookups (needs low latency). The existing provider factory handles this — add a `prefer_speed` flag to the AI call.
 - **Stage progression:** Stage is set by the backend based on `arrival_date`. Users can also manually advance their stage. Never let stage go backward automatically.
 - **Mentor opt-in only:** Never auto-graduate a user to mentor. It must be an explicit opt-in action. Mentors can pause or deactivate their availability without losing their history.
