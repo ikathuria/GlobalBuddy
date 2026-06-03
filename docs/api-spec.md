@@ -1,14 +1,15 @@
-﻿# Globalदोस्त API Specification (FastAPI)
+# Globalदोस्त API Specification (FastAPI)
 
-## 1. API conventions
+## 1. API Conventions
 - Base path: `/v1`
 - Content type: `application/json`
-- Health endpoints live at root (`/health`, `/health/neo4j`)
+- Health endpoints live at root: `/health`, `/health/providers`, target `/health/graph`
+- Protected routes use `Authorization: Bearer <token>` after Neon Auth integration
 
 ## 2. POST `/v1/profile/match`
-Runs profile matching, local-intelligence ranking, and session creation.
+Runs profile matching, local-intelligence ranking, and session creation from graph evidence.
 
-### Request (example)
+### Request Example
 ```json
 {
   "full_name": "Priya Raman",
@@ -29,7 +30,7 @@ Runs profile matching, local-intelligence ranking, and session creation.
 }
 ```
 
-### Response (high-level shape)
+### Response Shape
 ```json
 {
   "session_id": "uuid",
@@ -43,6 +44,7 @@ Runs profile matching, local-intelligence ranking, and session creation.
   "housing_areas": [],
   "exploration_spots": [],
   "transit_tips": [],
+  "community_groups": [],
   "evidence_bundle": {},
   "subgraph": {
     "nodes": [],
@@ -127,18 +129,60 @@ Returns session-scoped graph for UI visualization.
 }
 ```
 
-## 6. GET `/health`
+## 6. POST `/v1/chat/message`
+Sends a persistent chat message. Before Neon persistence is enabled, chat may use session-local history.
+
+### Request
+```json
+{
+  "session_id": "uuid",
+  "message": "How do I open a bank account?"
+}
+```
+
+### Response
+```json
+{
+  "reply": "...",
+  "fallback_used": false,
+  "llm_provider": "gemini"
+}
+```
+
+## 7. Auth Endpoints (Target)
+- `POST /v1/auth/signup`
+- `POST /v1/auth/login`
+- `GET /v1/auth/me`
+- `GET /v1/auth/linkedin/profile`
+
+Auth is backed by Neon Auth / Stack Auth. FastAPI verifies JWTs through the Stack Auth JWKS and resolves the app profile in Neon Postgres.
+
+## 8. Health Endpoints
+
+### GET `/health`
 ```json
 { "status": "ok" }
 ```
 
-## 7. GET `/health/neo4j`
+### GET `/health/providers`
 ```json
 {
-  "status": "ok",
-  "node_count": 123,
-  "seed_command": null
+  "gemini": { "status": "ok", "latency_ms": 120 },
+  "groq": { "status": "not_configured", "latency_ms": null },
+  "anthropic": { "status": "not_configured", "latency_ms": null }
 }
 ```
 
-When `node_count` is `0`, `seed_command` includes the backend seed command string.
+### GET `/health/graph` (Target)
+```json
+{
+  "status": "ok",
+  "source": "markdown",
+  "node_count": 123,
+  "edge_count": 456,
+  "validation_errors": []
+}
+```
+
+### GET `/health/neo4j` (Legacy)
+May remain temporarily during migration for the existing Neo4j adapter.

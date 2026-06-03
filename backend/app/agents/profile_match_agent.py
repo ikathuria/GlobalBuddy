@@ -277,9 +277,16 @@ async def _persist_profile_to_db(
 
 
 async def run_profile_match(
-    neo4j: Neo4jClient,
+    graph_source: Any,
     profile: ProfileMatchRequest,
 ) -> ProfileMatchResponse:
+    if getattr(graph_source, "source", "") == "markdown":
+        return graph_source.profile_match(profile)
+
+    if graph_source is None:
+        raise RuntimeError("No graph source is configured.")
+
+    neo4j: Neo4jClient = graph_source
     session_id = str(uuid.uuid4())
     country = profile.country_of_origin.strip()
     country_code = _country_code_hint(country)

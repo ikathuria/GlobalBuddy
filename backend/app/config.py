@@ -1,16 +1,16 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field, field_validator, model_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Always resolve .env next to the backend package (works even if cwd is repo root).
+# Always resolve .env next to the backend package.
 _BACKEND_DIR = Path(__file__).resolve().parents[1]
 _REPO_DIR = _BACKEND_DIR.parent
 
 
 class Settings(BaseSettings):
-    """Application settings — Neo4j required; at least one AI backend required for plan/bridge."""
+    """Application settings; at least one AI backend is required for plan/bridge."""
 
     model_config = SettingsConfigDict(
         env_file=_BACKEND_DIR / ".env",
@@ -18,24 +18,39 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    neo4j_uri: str = Field(..., min_length=1, description="Neo4j Aura bolt URI")
-    neo4j_user: str = Field(..., min_length=1)
-    neo4j_password: str = Field(..., min_length=1)
+    graph_source: str = Field(default="markdown", description="markdown | neo4j")
+    graph_data_dir: str = Field(default=str((_REPO_DIR / "data" / "graph").resolve()))
 
-    # AI — Gemini is the default implementation; RocketRide SDK / HTTP / Anthropic are alternates.
+    # Optional legacy Neo4j adapter.
+    neo4j_uri: str = Field(default="", description="Optional legacy Neo4j Aura bolt URI")
+    neo4j_user: str = Field(
+        default="",
+        validation_alias=AliasChoices("NEO4J_USER", "NEO4J_USERNAME"),
+    )
+    neo4j_password: str = Field(default="")
+    neo4j_database: str | None = Field(default=None)
+
+    # Target Neon persistence/auth settings.
+    database_url: str = Field(default="", description="Neon pooled Postgres connection string")
+    database_url_unpooled: str = Field(default="", description="Neon direct connection string for migrations")
+    stack_project_id: str = Field(default="", description="Neon Auth / Stack Auth project id")
+    stack_publishable_client_key: str = Field(default="", description="Neon Auth publishable key")
+    stack_secret_server_key: str = Field(default="", description="Neon Auth server secret")
+    stack_jwks_url: str = Field(default="", description="Stack Auth JWKS URL")
+
+    # AI providers.
     ai_provider: str = Field(
         default="auto",
         description=(
-            "auto | gemini | rocketride_sdk | rocketride_http | anthropic "
-            "— auto prefers Gemini when GEMINI_API_KEY is set"
+            "auto | gemini | rocketride_sdk | rocketride_http | anthropic | groq; "
+            "auto prefers Gemini when GEMINI_API_KEY is set"
         ),
     )
     gemini_api_key: str = Field(default="", description="Google AI Studio / Vertex-compatible Gemini API key")
     gemini_model: str = Field(default="gemini-2.0-flash", description="Gemini model id for generateContent")
-
     anthropic_api_key: str = Field(default="", description="Optional Anthropic fallback via httpx")
 
-    rocketride_uri: str = Field(default="", description="RocketRide DAP base URI (e.g. https://cloud.rocketride.ai)")
+    rocketride_uri: str = Field(default="", description="RocketRide DAP base URI")
     rocketride_apikey: str = Field(default="", description="RocketRide API key for SDK/HTTP")
     rocketride_gemini_key: str = Field(
         default="",
@@ -54,26 +69,20 @@ class Settings(BaseSettings):
         description="Legacy full HTTPS URL for RocketRide HTTP JSON inference",
     )
 
-    # AI call timeout
-    ai_timeout_seconds: int = Field(default=30, description="Hard timeout for each AI provider call (plan + bridge)")
-
-    # Groq — fast free fallback
+    ai_timeout_seconds: int = Field(default=30, description="Hard timeout for each AI provider call")
     groq_api_key: str = Field(default="", description="Groq API key for low-latency fallback")
     groq_model: str = Field(default="llama3-8b-8192", description="Groq model id")
 
-    # Supabase — required for auth and persistent accounts (Milestone 4)
-    supabase_url: str = Field(default="", description="Supabase project URL")
-    supabase_service_role_key: str = Field(default="", description="Supabase service role key (server only)")
-    supabase_jwt_secret: str = Field(default="", description="Supabase JWT secret for token verification")
+    # Legacy Supabase fields are ignored by the target Neon stack but accepted
+    # for older local .env files during migration.
+    supabase_url: str = Field(default="", description="Legacy Supabase project URL")
+    supabase_service_role_key: str = Field(default="", description="Legacy Supabase service role key")
+    supabase_jwt_secret: str = Field(default="", description="Legacy Supabase JWT secret")
 
-    # Upstash Redis — session persistence (Milestone 6)
     upstash_redis_url: str = Field(default="", description="Upstash Redis REST URL")
     upstash_redis_token: str = Field(default="", description="Upstash Redis REST token")
-
-    # Resend — email (Milestone 13)
     resend_api_key: str = Field(default="", description="Resend API key for transactional email")
 
-    # LinkedIn OAuth (Milestone 5)
     linkedin_client_id: str = Field(default="")
     linkedin_client_secret: str = Field(default="")
     linkedin_redirect_uri: str = Field(default="http://localhost:8000/v1/auth/linkedin/callback")
@@ -93,16 +102,28 @@ class Settings(BaseSettings):
     def cors_origins_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 
+    @property
+    def graph_data_path(self) -> Path:
+        raw = Path(self.graph_data_dir)
+        if raw.is_absolute():
+            return raw
+        return (_BACKEND_DIR / raw).resolve()
+
+    @property
+    def neo4j_enabled(self) -> bool:
+        return bool(self.neo4j_uri.strip() and self.neo4j_user.strip() and self.neo4j_password.strip())
+
     @model_validator(mode="after")
     def require_llm_backend(self) -> "Settings":
         has_gemini = bool(self.gemini_api_key.strip())
         has_rr_sdk = bool(self.rocketride_uri.strip() and self.rocketride_apikey.strip())
         has_rr_http = bool(self.rocketride_http_completion_url.strip() and self.rocketride_apikey.strip())
         has_anthropic = bool(self.anthropic_api_key.strip())
-        if not (has_gemini or has_rr_sdk or has_rr_http or has_anthropic):
+        has_groq = bool(self.groq_api_key.strip())
+        if not (has_gemini or has_rr_sdk or has_rr_http or has_anthropic or has_groq):
             raise ValueError(
                 "Set GEMINI_API_KEY (recommended), or ROCKETRIDE_URI with ROCKETRIDE_APIKEY, "
-                "or ROCKETRIDE_HTTP_COMPLETION_URL with ROCKETRIDE_APIKEY, or ANTHROPIC_API_KEY "
+                "or ROCKETRIDE_HTTP_COMPLETION_URL with ROCKETRIDE_APIKEY, GROQ_API_KEY, or ANTHROPIC_API_KEY "
                 "for plan/bridge endpoints."
             )
         return self
@@ -114,7 +135,7 @@ def get_settings() -> Settings:
 
 
 class Neo4jOnlySettings(BaseSettings):
-    """Neo4j only — used by the seed script so LLM keys are not required."""
+    """Neo4j only; used by seed scripts so LLM keys are not required."""
 
     model_config = SettingsConfigDict(
         env_file=_BACKEND_DIR / ".env",
@@ -123,7 +144,11 @@ class Neo4jOnlySettings(BaseSettings):
     )
 
     neo4j_uri: str = Field(..., min_length=1)
-    neo4j_user: str = Field(..., min_length=1)
+    neo4j_user: str = Field(
+        ...,
+        min_length=1,
+        validation_alias=AliasChoices("NEO4J_USER", "NEO4J_USERNAME"),
+    )
     neo4j_password: str = Field(..., min_length=1)
 
 

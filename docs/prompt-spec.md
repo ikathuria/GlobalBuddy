@@ -1,7 +1,7 @@
 ﻿# Globalदोस्त Prompt Specification
 
 ## 1. Prompting principles
-- Evidence-first: use only entities present in `evidence_bundle`.
+- Evidence-first: use only entities present in `evidence_bundle`, which is generated from the Markdown knowledge graph and any permitted Neon user context.
 - Ordered reasoning: respect task dependency ordering.
 - Human tone: practical, calm, and specific.
 - Safety: avoid legal/financial certainty language.
@@ -9,7 +9,7 @@
 ## 2. Judge agent prompt contract
 
 ### System intent
-"Generate a first-30-days plan grounded in graph evidence."
+"Generate a first-30-days plan grounded in Markdown graph evidence."
 
 ### Required rules
 1. Reference only known entities from the bundle.

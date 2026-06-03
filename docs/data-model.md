@@ -1,8 +1,59 @@
-﻿# Globalदोस्त Neo4j Data Model
+# Globalदोस्त Data Model
 
-## 1. Primary node labels
-- `Session`
-- `StudentProfile`
+## 1. Data Ownership
+Globalदोस्त uses two data stores in the target MVP:
+
+- **Markdown knowledge graph:** public/static city knowledge stored in Git.
+- **Neon Postgres:** private/dynamic user and product data.
+
+Private user data must never be committed to Markdown.
+
+## 2. Markdown Knowledge Graph
+
+### Folder Layout
+```text
+data/graph/
+  chicago/
+    mentors/
+    universities/
+    tasks/
+    places/
+    events/
+    groups/
+    guides/
+  boston/
+  new-york/
+```
+
+### File Shape
+Each graph node is a Markdown file with YAML frontmatter and optional `[[wikilinks]]` in the body.
+
+```md
+---
+id: task_apply_ssn
+type: Task
+title: Apply for SSN
+city: Chicago
+category: document
+stage: newcomer
+needs:
+  - employment
+  - documents
+depends_on:
+  - task_retrieve_i94
+links_to:
+  - guide_ssn
+  - place_social_security_office_chicago
+---
+
+# Apply for SSN
+
+Bring your passport, I-20, I-94, and employment eligibility letter.
+
+Related: [[I-94]], [[Social Security Office]], [[Bank Account]]
+```
+
+## 3. Markdown Node Types
 - `Mentor`
 - `Peer`
 - `University`
@@ -10,6 +61,7 @@
 - `City`
 - `Need`
 - `Task`
+- `Guide`
 - `Resource`
 - `Restaurant`
 - `Event`
@@ -18,47 +70,61 @@
 - `HousingArea`
 - `ExplorationSpot`
 - `TransitTip`
+- `CommunityGroup`
 
-## 2. Core relationship patterns
-- `(:Session)-[:FOR_STUDENT]->(:StudentProfile)`
-- `(:Mentor)-[:FROM_COUNTRY]->(:Country)`
-- `(:Mentor)-[:ALUM_OF]->(:University)`
-- `(:Mentor)-[:CAN_HELP_WITH]->(:Need)`
-- `(:Peer)-[:STUDIES_AT]->(:University)`
-- `(:Restaurant)-[:SERVES_CUISINE]->(:Country)`
-- `(:Event)-[:RELEVANT_TO]->(:Country)`
-- `(:Event)-[:OCCURS_IN]->(:City)`
-- `(:Resource)-[:HELPS_WITH]->(:Need)`
-- `(:Task)-[:PRECEDES]->(:Task)`
-- `(:HousingArea)-[:NEAR_UNIVERSITY]->(:University)`
-- `(:ExplorationSpot)-[:LOCATED_IN]->(:City)`
-- `(:TransitTip)-[:GOOD_FOR]->(:City)`
-- `(:PlaceOfWorship)-[:RELEVANT_TO]->(:Country)` (optional)
-- `(:GroceryStore)-[:RELEVANT_TO]->(:Country)` (optional)
+## 4. Markdown Relationship Sources
+Relationships are generated from:
 
-## 3. Key property highlights
-- `Mentor`: `id`, `name`, `trust_score`, `languages`, `email`, `connect_hint`
-- `Peer`: `id`, `name`, `university`, `neighborhood`, `email`, `connect_hint`
-- `Event`: `id`, `name`, `category`, `start_time`, `location`, `notes`, `maps_query`, `maps_link`
-- `Task`: `id`, `name`, `priority`, `estimated_day_window`
-- Local place labels (`PlaceOfWorship`, `GroceryStore`, `HousingArea`, `ExplorationSpot`):
-  - `id`, `name`, `address`, `neighborhood`, `maps_query`, `maps_link`, optional tag arrays
-- `TransitTip`: `id`, `name`, `summary`, `route_hint`, `maps_link`
+- `depends_on` frontmatter for ordered task dependencies.
+- `links_to` frontmatter for explicit typed edges.
+- `[[wikilinks]]` in the Markdown body for Obsidian-style related edges.
+- Normalized tag overlap for scoring relationships, such as shared `city`, `country_tags`, `university_tags`, `needs`, `diet_tags`, and `religion_tags`.
 
-## 4. Ranking and scoring inputs
-- Mentor ranking: shared country, shared university, need overlap, trust score.
-- Local-fit ranking: profile token overlap against place/event tags.
+## 5. Graph Scoring Inputs
+- Mentor ranking: shared country, shared university, need overlap, languages, stage fit, trust/reputation score.
+- Local-fit ranking: profile token overlap against place/event/group tags.
+- Task ordering: `depends_on` edges are topologically sorted before plan generation.
 - Aggregated API scores:
   - `support_coverage_score`
   - `belonging_score`
   - `cultural_fit_score`
 
-## 5. Task dependency layer
-Task ordering is encoded via `Task-[:PRECEDES]->Task` and transformed into ordered output for plan generation.
+## 6. Neon Postgres Tables
 
-## 6. Seed guidance
-Seed scripts should keep deterministic demo quality with:
-- mentor and peer coverage for at least one hero university-city path
-- task chain with clear prerequisite links
-- local context entities with map query/link metadata
-- event/resource notes that avoid claiming live schedule guarantees
+### Identity and Profile
+- `user_profiles`: `id`, `auth_user_id`, `full_name`, `email`, `country_of_origin`, `target_university`, `target_city`, `stage`, `arrival_date`, `created_at`, `updated_at`
+
+`auth_user_id` references the user identity synced by Neon Auth / Stack Auth.
+
+### Progress and Documents
+- `plan_progress`: `id`, `user_id`, `task_id`, `completed`, `updated_at`
+- `user_documents`: `id`, `user_id`, `doc_type`, `status`, `updated_at`
+
+### Chat
+- `chat_messages`: `id`, `user_id`, `session_id`, `role`, `content`, `created_at`
+
+### Social
+- `connections`: `id`, `requester_id`, `recipient_id`, `status`, `created_at`, `updated_at`
+- `intro_requests`: `id`, `requester_id`, `mentor_id`, `status`, `message`, `created_at`, `updated_at`
+
+### Feed and Saved Content
+- `content_items`: `id`, `type`, `title`, `body`, `city`, `tags`, `author_id`, `published_at`
+- `saved_content`: `id`, `user_id`, `content_id`, `content_source`, `created_at`
+
+### Mentors
+- `mentor_profiles`: `user_id`, `expertise`, `availability`, `bio`, `response_rate`, `intro_count`, `rating`, `opted_in_at`
+- `mentor_ratings`: `id`, `mentor_id`, `reviewer_id`, `rating`, `comment`, `created_at`
+
+### Notifications
+- `notifications`: `id`, `user_id`, `type`, `title`, `body`, `read`, `created_at`
+
+## 7. Validation Rules
+- Every Markdown node must have a globally unique `id`.
+- Every Markdown node must have `type`, `title`, and `city` when city-specific.
+- `depends_on` and `links_to` targets must exist.
+- Task dependency graph must be acyclic.
+- Map-bearing nodes should include `address`, `lat`, `lng`, or `maps_query`.
+- Time-sensitive nodes must include verification/disclaimer copy.
+
+## 8. Legacy Neo4j Notes
+The existing Neo4j/Cypher seed data remains useful as migration source material. It is not the target MVP source of truth after the Markdown graph engine is implemented.

@@ -107,6 +107,14 @@ class TransitTipCard(BaseModel):
     maps_link: str = ""
 
 
+class CommunityGroupCard(BaseModel):
+    id: str
+    name: str
+    platform: str = ""
+    join_url: str = ""
+    why_recommended: str = ""
+
+
 class ResourceCard(BaseModel):
     id: str
     name: str
@@ -149,6 +157,7 @@ class ProfileMatchResponse(BaseModel):
     housing_areas: list[LocalPlaceCard] = Field(default_factory=list)
     exploration_spots: list[LocalPlaceCard] = Field(default_factory=list)
     transit_tips: list[TransitTipCard] = Field(default_factory=list)
+    community_groups: list[CommunityGroupCard] = Field(default_factory=list)
     evidence_bundle: dict[str, Any]
     subgraph: Subgraph
     support_coverage_score: float = Field(

@@ -1,4 +1,4 @@
-"""POST /v1/profile/match — Neo4j evidence + session storage."""
+"""POST /v1/profile/match - graph evidence + session storage."""
 
 from fastapi import APIRouter, Request
 
@@ -11,8 +11,8 @@ router = APIRouter(prefix="/v1/profile", tags=["profile"])
 
 @router.post("/match", response_model=ProfileMatchResponse)
 async def profile_match(payload: ProfileMatchRequest, request: Request) -> ProfileMatchResponse:
-    neo4j = request.app.state.neo4j_client
-    result = await run_profile_match(neo4j, payload)
+    graph_source = getattr(request.app.state, "graph_service", None) or request.app.state.neo4j_client
+    result = await run_profile_match(graph_source, payload)
     session_store.set(
         result.session_id,
         {

@@ -12,6 +12,7 @@ from starlette.responses import Response
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
 from app.routers import auth, bridge, chat, graph, plan, pre_arrival, profile
+from app.services.markdown_graph import MarkdownGraphService
 
 _telemetry_logger = logging.getLogger("app.telemetry")
 _TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain", "/v1/chat/message"}
@@ -44,15 +45,23 @@ class _RequestTelemetryMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = get_settings()
-    neo4j = Neo4jClient(
-        uri=settings.neo4j_uri,
-        user=settings.neo4j_user,
-        password=settings.neo4j_password,
-    )
-    await neo4j.connect()
+    graph_service = None
+    if settings.graph_source.lower() == "markdown":
+        graph_service = MarkdownGraphService(settings.graph_data_path)
+    app.state.graph_service = graph_service
+
+    neo4j: Neo4jClient | None = None
+    if settings.graph_source.lower() == "neo4j" and settings.neo4j_enabled:
+        neo4j = Neo4jClient(
+            uri=settings.neo4j_uri,
+            user=settings.neo4j_user,
+            password=settings.neo4j_password,
+        )
+        await neo4j.connect()
     app.state.neo4j_client = neo4j
     yield
-    await neo4j.close()
+    if neo4j is not None:
+        await neo4j.close()
 
 
 def create_app() -> FastAPI:
@@ -137,10 +146,29 @@ def create_app() -> FastAPI:
 
         return {"providers": results}
 
+    @app.get("/health/graph", tags=["system"])
+    async def health_graph(request: Request) -> dict:
+        graph_service = request.app.state.graph_service
+        if graph_service is None:
+            return {
+                "status": "disabled",
+                "source": get_settings().graph_source,
+                "node_count": 0,
+                "edge_count": 0,
+                "validation_errors": [],
+            }
+        return graph_service.health()
+
     @app.get("/health/neo4j", tags=["system"])
     async def health_neo4j(request: Request) -> dict[str, str | int | None]:
-        """Quick DB probe: graph data only exists after you run the seed script (API does not auto-seed)."""
+        """Legacy DB probe kept during the Markdown graph migration."""
         neo4j = request.app.state.neo4j_client
+        if neo4j is None:
+            return {
+                "status": "disabled",
+                "node_count": 0,
+                "seed_command": None,
+            }
         rows = await neo4j.query("MATCH (n) RETURN count(n) AS c", {})
         count = int(rows[0]["c"]) if rows else 0
         return {

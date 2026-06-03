@@ -1,6 +1,8 @@
 ﻿# Globalदोस्त
 
-Globalदोस्त is a graph-powered support platform for international students arriving in US cities. The current product experience is a guided 3-step journey that turns profile context plus Neo4j evidence into practical next actions.
+Globalदोस्त is a graph-powered support platform for international students arriving in US cities. The target MVP experience is a guided 3-step journey that turns profile context plus an Obsidian-style Markdown knowledge graph into practical next actions.
+
+The repo still contains a legacy Neo4j adapter and Cypher seed packs. The active roadmap moves public city knowledge to Markdown files with YAML frontmatter and `[[wikilinks]]`, while private/dynamic user data moves to Neon Auth + Neon Postgres.
 
 Motto: *You didn't come this far to figure it out alone.*
 
@@ -18,7 +20,7 @@ Motto: *You didn't come this far to figure it out alone.*
   - Task completion is persisted per session in browser local storage.
   - Each plan step can focus related graph nodes.
 
-- **Step 3 - Explore Graph**
+- **Step 3 - Explore Knowledge Graph**
   - Category views: People, Events, Food, Housing, Tasks.
   - Person profile modal with one-click contact links (email/LinkedIn/Instagram/phone when available).
   - vis-network graph with filter chips, path highlighting, shortest-path breadcrumb, and fit/expand controls.
@@ -29,13 +31,15 @@ Motto: *You didn't come this far to figure it out alone.*
   - Returns plain explanation, home-context analogy, common mistakes, and next actions.
 
 - **System status checks**
-  - UI probes `GET /health` and `GET /health/neo4j`.
-  - Shows API live/offline state and Neo4j node count with retry.
+  - UI probes `GET /health` and, after the Markdown migration, `GET /health/graph`.
+  - Shows API live/offline state and graph-source health with retry.
 
 ## Backend stack
 
 - FastAPI (`backend/app`)
-- Neo4j AuraDB as source of truth for graph evidence
+- Markdown knowledge graph target: YAML frontmatter + `[[wikilinks]]` compiled into typed nodes/edges
+- Neon Auth + Neon Postgres target for accounts, plan progress, chat, connections, content, and notifications
+- Legacy Neo4j support remains optional until the Markdown graph engine replaces it
 - AI provider abstraction:
   - `gemini` (default-recommended)
   - `rocketride_sdk`
@@ -50,7 +54,8 @@ Motto: *You didn't come this far to figure it out alone.*
 - `POST /v1/bridge/explain`
 - `GET /v1/graph/subgraph?session_id=...`
 - `GET /health`
-- `GET /health/neo4j`
+- `GET /health/graph` (target)
+- `GET /health/neo4j` (legacy during migration)
 
 ## Environment variables
 
@@ -58,9 +63,12 @@ Copy `backend/.env.example` to `backend/.env`.
 
 | Variable | Purpose |
 |---|---|
-| `NEO4J_URI` | Aura URI (`neo4j+s://...`) |
-| `NEO4J_USER` | Neo4j user |
-| `NEO4J_PASSWORD` | Neo4j password |
+| `DATABASE_URL` | Neon pooled Postgres connection string |
+| `DATABASE_URL_UNPOOLED` | Neon direct connection string for migrations |
+| `STACK_PROJECT_ID` | Neon Auth / Stack Auth project id |
+| `STACK_PUBLISHABLE_CLIENT_KEY` | Neon Auth publishable key |
+| `STACK_SECRET_SERVER_KEY` | Neon Auth server secret |
+| `STACK_JWKS_URL` | JWKS URL for backend JWT verification |
 | `AI_PROVIDER` | `auto`, `gemini`, `rocketride_sdk`, `rocketride_http`, `anthropic` |
 | `GEMINI_API_KEY` | Gemini key (recommended path) |
 | `GEMINI_MODEL` | Gemini model id (default `gemini-2.0-flash`) |
@@ -72,6 +80,8 @@ Copy `backend/.env.example` to `backend/.env`.
 | `ROCKETRIDE_HTTP_COMPLETION_URL` | Legacy RocketRide HTTP completion URL |
 | `ANTHROPIC_API_KEY` | Anthropic key |
 | `CORS_ORIGINS` | Comma-separated allowed origins |
+
+Legacy Neo4j variables may still be used by the current adapter until Milestone 4 in [PLAN.md](./PLAN.md) is implemented.
 
 Validation rule: at least one provider path must be configured (`GEMINI_API_KEY`, RocketRide SDK pair, RocketRide HTTP pair, or `ANTHROPIC_API_KEY`).
 
@@ -95,15 +105,17 @@ source .venv/bin/activate
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### 2) Seed graph data
+### 2) Graph data
+
+Target graph data lives under `data/graph/{city}/...` as Markdown files. Each file has YAML frontmatter for typed properties and `[[wikilinks]]` for graph edges.
+
+Until the Markdown graph engine is implemented, the legacy Neo4j seed command is still available:
 
 ```bash
 cd backend
 source .venv/bin/activate
 python -m app.db.seed_data
 ```
-
-The seed script only needs Neo4j variables.
 
 ### 3) Frontend
 
@@ -118,7 +130,7 @@ Optional: set `VITE_API_TIMEOUT_MS` (default `180000`).
 
 ## Demo flow
 
-1. Open app and verify status pills show API and Neo4j health.
+1. Open app and verify status pills show API and graph-source health.
 2. Complete Step 1 profile wizard and submit.
 3. If `new_to_us=true`, generate plan in Step 2; if false, Step 2 is skipped and Step 3 opens directly.
 4. Use "Explain term" to open Cultural Bridge.

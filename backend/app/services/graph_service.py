@@ -9,6 +9,8 @@ from neo4j.exceptions import Neo4jError
 
 from app.config import Settings
 from app.models import GraphEdge, GraphNode, GraphSubgraph
+from app.models.schemas import ProfileMatchRequest as ApiProfileMatchRequest
+from app.services.markdown_graph import MarkdownGraphService
 from app.services.ranking_service import mentor_score, normalize_text_list
 
 
@@ -267,15 +269,18 @@ class GraphService:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
         self._driver = None
-        if settings.neo4j_enabled:
+        self._markdown: MarkdownGraphService | None = None
+        if settings.graph_source.lower() == "markdown":
+            self._markdown = MarkdownGraphService(settings.graph_data_path)
+        elif settings.neo4j_enabled:
             self._driver = GraphDatabase.driver(
                 settings.neo4j_uri,
-                auth=(settings.neo4j_username, settings.neo4j_password),
+                auth=(settings.neo4j_user, settings.neo4j_password),
             )
 
     @property
     def enabled(self) -> bool:
-        return self._driver is not None
+        return self._markdown is not None or self._driver is not None
 
     def close(self) -> None:
         if self._driver is not None:
@@ -311,6 +316,17 @@ class GraphService:
         return "US"
 
     def profile_match(self, payload: ProfileInput) -> dict[str, Any]:
+        if self._markdown is not None:
+            request = ApiProfileMatchRequest(
+                country_of_origin=payload.country_of_origin,
+                home_city=payload.home_city,
+                target_university=payload.target_university,
+                target_city=payload.target_city,
+                needs=payload.needs,
+                interests=payload.interests,
+            )
+            return self._markdown.profile_match(request).model_dump(mode="json", by_alias=True)
+
         if not self.enabled:
             return self._demo_profile_match(payload)
 

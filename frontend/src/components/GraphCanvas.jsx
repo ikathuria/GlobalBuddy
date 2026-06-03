@@ -15,13 +15,16 @@ const GRAPH_GROUP_STYLES = {
   housing_area: { bg: "#1e3a8a", border: "#93c5fd", label: "Housing" },
   exploration: { bg: "#0f766e", border: "#5eead4", label: "Explore" },
   transit_tip: { bg: "#1e293b", border: "#94a3b8", label: "Transit" },
+  community_group: { bg: "#6d28d9", border: "#c4b5fd", label: "Group" },
+  local_entity: { bg: "#475569", border: "#cbd5e1", label: "Local" },
+  guide: { bg: "#854d0e", border: "#facc15", label: "Guide" },
 };
 
 const FILTER_GROUPS = [
   { id: "people", label: "People", groups: ["student", "mentor", "peer"] },
   { id: "events", label: "Events", groups: ["event"] },
-  { id: "places", label: "Places", groups: ["housing_area", "grocery", "restaurant", "place_worship", "exploration"] },
-  { id: "support", label: "Support", groups: ["resource", "task", "transit_tip"] },
+  { id: "places", label: "Places", groups: ["housing_area", "grocery", "restaurant", "place_worship", "exploration", "local_entity"] },
+  { id: "support", label: "Support", groups: ["resource", "task", "transit_tip", "guide", "community_group"] },
 ];
 
 const VIS_OPTIONS = {

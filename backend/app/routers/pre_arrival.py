@@ -1,4 +1,4 @@
-"""GET /v1/pre-arrival/checklist — returns PreArrivalChecklist nodes from Neo4j."""
+"""GET /v1/pre-arrival/checklist - graph-backed pre-arrival checklist."""
 
 from fastapi import APIRouter, Request
 from pydantic import BaseModel
@@ -10,8 +10,8 @@ class PreArrivalItem(BaseModel):
     id: str
     name: str
     description: str
-    when: str           # before_landing | arrival_day | first_week
-    priority: str       # critical | high | medium | low
+    when: str
+    priority: str
     category: str
 
 
@@ -21,7 +21,15 @@ _WHEN_ORDER = {"before_landing": 0, "arrival_day": 1, "first_week": 2}
 
 @router.get("/checklist", response_model=list[PreArrivalItem])
 async def get_checklist(request: Request) -> list[PreArrivalItem]:
-    neo4j = request.app.state.neo4j_client
+    graph_service = getattr(request.app.state, "graph_service", None)
+    if getattr(graph_service, "source", "") == "markdown":
+        items = [PreArrivalItem(**row) for row in graph_service.pre_arrival_items()]
+        return _sort_items(items)
+
+    neo4j = getattr(request.app.state, "neo4j_client", None)
+    if neo4j is None:
+        return []
+
     rows = await neo4j.query(
         """
         MATCH (p:PreArrivalChecklist)
@@ -42,6 +50,10 @@ async def get_checklist(request: Request) -> list[PreArrivalItem]:
         for row in rows
         if row.get("id")
     ]
+    return _sort_items(items)
+
+
+def _sort_items(items: list[PreArrivalItem]) -> list[PreArrivalItem]:
     return sorted(
         items,
         key=lambda i: (_WHEN_ORDER.get(i.when, 9), _PRIORITY_ORDER.get(i.priority, 9)),

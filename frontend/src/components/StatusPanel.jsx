@@ -16,8 +16,8 @@ function normalizeHealthBody(data) {
 export default function StatusPanel({ compact = false }) {
   const [apiLabel, setApiLabel] = useState("checking...");
   const [apiOk, setApiOk] = useState(null);
-  const [neo4j, setNeo4j] = useState(null);
-  const [neo4jError, setNeo4jError] = useState(null);
+  const [graph, setGraph] = useState(null);
+  const [graphError, setGraphError] = useState(null);
   const [tick, setTick] = useState(0);
   const [apiError, setApiError] = useState(null);
 
@@ -26,12 +26,12 @@ export default function StatusPanel({ compact = false }) {
     setApiLabel("checking...");
     setApiOk(null);
     setApiError(null);
-    setNeo4jError(null);
+    setGraphError(null);
 
     const run = async () => {
       const healthP = client.get("/health");
-      const neo4jP = client.get("/health/neo4j");
-      const [healthSettled, neo4jSettled] = await Promise.allSettled([healthP, neo4jP]);
+      const graphP = client.get("/health/graph").catch(() => client.get("/health/neo4j"));
+      const [healthSettled, graphSettled] = await Promise.allSettled([healthP, graphP]);
 
       if (cancelled) return;
 
@@ -62,13 +62,13 @@ export default function StatusPanel({ compact = false }) {
         setApiError(msg);
       }
 
-      if (neo4jSettled.status === "fulfilled") {
-        setNeo4j(neo4jSettled.value.data);
-        setNeo4jError(null);
+      if (graphSettled.status === "fulfilled") {
+        setGraph(graphSettled.value.data);
+        setGraphError(null);
       } else {
-        const e = neo4jSettled.reason;
-        setNeo4j(null);
-        setNeo4jError(e?.message || "Neo4j probe failed");
+        const e = graphSettled.reason;
+        setGraph(null);
+        setGraphError(e?.message || "Graph probe failed");
       }
     };
 
@@ -84,16 +84,16 @@ export default function StatusPanel({ compact = false }) {
         <span className="gb-pill-dot" aria-hidden="true" />
         API {apiOk === true ? "live" : apiOk === false ? "offline" : apiLabel}
       </span>
-      {neo4j && !neo4jError && (
+      {graph && !graphError && (
         <span className="gb-pill">
           <span className="gb-pill-dot" style={{ color: "var(--gb-accent)" }} aria-hidden="true" />
-          Neo4j | {neo4j.node_count ?? "?"} nodes
+          Graph | {graph.node_count ?? "?"} nodes
         </span>
       )}
-      {neo4jError && (
-        <span className="gb-pill gb-pill--bad" title={neo4jError}>
+      {graphError && (
+        <span className="gb-pill gb-pill--bad" title={graphError}>
           <span className="gb-pill-dot" aria-hidden="true" />
-          Neo4j issue
+          Graph issue
         </span>
       )}
       {!compact && (
@@ -111,7 +111,7 @@ export default function StatusPanel({ compact = false }) {
 
   if (compact) {
     return (
-      <div className="gb-status-inline" aria-label="Health checks" title={apiError || neo4jError || "Health checks"}>
+      <div className="gb-status-inline" aria-label="Health checks" title={apiError || graphError || "Health checks"}>
         {row}
       </div>
     );
@@ -131,10 +131,16 @@ export default function StatusPanel({ compact = false }) {
           <span style={{ fontSize: "0.82rem" }}>{apiError}</span>
         </p>
       )}
-      {neo4j?.node_count === 0 && neo4j.seed_command && (
+      {graph?.node_count === 0 && graph.seed_command && (
         <p className="gb-seed-hint">
           Graph is empty. Seed once so matches return real evidence.
-          <code>{neo4j.seed_command}</code>
+          <code>{graph.seed_command}</code>
+        </p>
+      )}
+      {Array.isArray(graph?.validation_errors) && graph.validation_errors.length > 0 && (
+        <p className="gb-seed-hint">
+          Graph validation needs attention.
+          <code>{graph.validation_errors[0]}</code>
         </p>
       )}
     </section>

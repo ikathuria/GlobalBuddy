@@ -211,12 +211,13 @@ def test_health_ok(api_client: object) -> None:
     assert r.json()["status"] == "ok"
 
 
-def test_health_neo4j_returns_node_count(api_client: object) -> None:
-    r = api_client.get("/health/neo4j")
+def test_health_graph_returns_node_count(api_client: object) -> None:
+    r = api_client.get("/health/graph")
     assert r.status_code == 200
     data = r.json()
     assert data["status"] == "ok"
     assert "node_count" in data
+    assert data["source"] == "markdown"
 
 
 def test_health_providers_returns_all_keys(api_client: object) -> None:
