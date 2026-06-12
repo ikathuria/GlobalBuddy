@@ -71,6 +71,7 @@ Related: [[I-94]], [[Social Security Office]], [[Bank Account]]
 - `ExplorationSpot`
 - `TransitTip`
 - `CommunityGroup`
+- `PreArrivalChecklist` — city-agnostic checklist items under `data/graph/common/pre-arrival/`; no `city` field required. Served by `GET /v1/pre-arrival/checklist` and kept out of plan task ordering.
 
 ## 4. Markdown Relationship Sources
 Relationships are generated from:

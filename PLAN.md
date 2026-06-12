@@ -187,7 +187,7 @@ Tasks:
 - [x] Add pre-arrival checklist content to existing graph seed data with ~15 items
 - [x] Add `/pre-arrival` route and `PreArrivalPanel.jsx` component — a checklist page accessible before Step 1 (no auth required)
 - [x] Add `DocumentTracker` component to the dashboard — tracks SSN, bank account, student ID, health insurance, I-20 copy, lease with status and links to how-to guides
-- [ ] Convert pre-arrival checklist and document tasks to Markdown graph nodes — Done when: plan generation uses Markdown task dependencies
+- [x] Convert pre-arrival checklist and document tasks to Markdown graph nodes — Done when: plan generation uses Markdown task dependencies
 - [x] Persist document tracker state to Neon `user_documents` table — Done when: authenticated document status syncs through `/v1/documents`
 - [x] Add `Task` graph nodes for each document (SSN, bank, health insurance) linked to the plan's topological order
 

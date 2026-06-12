@@ -11,6 +11,7 @@ needs:
   - banking
 depends_on:
   - task_retrieve_i94
+  - task_iss_checkin
 description: Bring passport, I-20, I-94, student ID or admission letter, and local address if available.
 links_to:
   - need_banking

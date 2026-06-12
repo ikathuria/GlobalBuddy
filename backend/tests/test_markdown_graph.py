@@ -53,6 +53,26 @@ def test_markdown_graph_orders_task_dependencies() -> None:
     ordered = [task["id"] for task in service.tasks_ordered("Chicago")]
     assert ordered.index("task_carry_documents") < ordered.index("task_retrieve_i94")
     assert ordered.index("task_retrieve_i94") < ordered.index("task_open_bank_account")
+    assert ordered.index("task_carry_documents") < ordered.index("task_iss_checkin")
+    assert ordered.index("task_iss_checkin") < ordered.index("task_open_bank_account")
+    assert ordered.index("task_open_bank_account") < ordered.index("task_apply_ssn")
+    assert "task_health_insurance" in ordered
+    assert "task_confirm_housing" in ordered
+
+
+def test_markdown_graph_pre_arrival_checklist_items() -> None:
+    service = MarkdownGraphService(_repo_graph_root())
+    items = service.pre_arrival_items()
+    by_id = {item["id"]: item for item in items}
+
+    assert len(items) >= 19
+    assert "pa_print_docs" in by_id
+    assert "pa_grocery_run" in by_id
+    assert by_id["pa_print_docs"]["when"] == "before_landing"
+    assert by_id["pa_print_docs"]["priority"] == "critical"
+    assert by_id["pa_bank_account"]["category"] == "banking"
+    assert all(item["when"] in {"before_landing", "arrival_day", "first_week"} for item in items)
+    assert all(item["description"] for item in items)
 
 
 def test_markdown_graph_validation_catches_duplicate_ids(tmp_path: Path) -> None:

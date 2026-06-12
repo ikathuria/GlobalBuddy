@@ -12,6 +12,7 @@ needs:
   - employment
 depends_on:
   - task_retrieve_i94
+  - task_open_bank_account
 description: Apply only when eligible, usually with on-campus employment or another qualifying reason.
 links_to:
   - localentity_chicago_social_security_office

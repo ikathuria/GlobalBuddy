@@ -444,7 +444,9 @@ class MarkdownGraphService:
         items: list[dict[str, str]] = []
         for node in self.nodes.values():
             category = str(node.data.get("category") or "").lower()
-            if node.type not in {"Task", "PreArrivalChecklist"} or category != "pre_arrival":
+            is_checklist = node.type == "PreArrivalChecklist"
+            is_pre_arrival_task = node.type == "Task" and category == "pre_arrival"
+            if not (is_checklist or is_pre_arrival_task):
                 continue
             description = str(data_description) if (data_description := node.data.get("description")) else (
                 node.body.splitlines()[0] if node.body else ""
@@ -543,7 +545,7 @@ class MarkdownGraphService:
                 report.errors.append(f"{node.path}: missing type")
             if not node.title:
                 report.errors.append(f"{node.path}: missing title")
-            if node.type not in {"Country", "Need"} and not node.city:
+            if node.type not in {"Country", "Need", "PreArrivalChecklist"} and not node.city:
                 report.errors.append(f"{node.path}: missing city")
 
             for target_id in [*_as_str_list(node.data.get("links_to")), *_as_str_list(node.data.get("depends_on"))]:
