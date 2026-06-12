@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.auth import get_optional_principal, require_principal
 from app.config import get_settings
 from app.db import repositories
+from app.utils.stages import normalize_stage
 
 router = APIRouter(prefix="/v1/auth", tags=["auth"])
 
@@ -19,6 +20,10 @@ class SignUpRequest(BaseModel):
 class SignInRequest(BaseModel):
     email: str
     password: str
+
+
+class StageUpdateRequest(BaseModel):
+    stage: str
 
 
 @router.get("/config")
@@ -42,6 +47,21 @@ async def me(request: Request) -> dict:
             "profile": _serialize_row(profile),
         }
     return {"claims": principal.claims, "profile": None}
+
+
+@router.patch("/me/stage")
+async def update_my_stage(payload: StageUpdateRequest, request: Request) -> dict:
+    db = request.app.state.db
+    principal = require_principal(request)
+    target_stage = normalize_stage(payload.stage, allow_mentor=False)
+    if target_stage is None:
+        raise HTTPException(status_code=400, detail="Stage must be newcomer, settler, or local.")
+    if not db.enabled:
+        raise HTTPException(status_code=503, detail="Database persistence is not configured.")
+
+    await repositories.get_or_create_profile_from_claims(db, principal.claims)
+    profile = await repositories.advance_user_stage(db, auth_user_id=principal.auth_user_id, stage=target_stage)
+    return {"profile": _serialize_row(profile)}
 
 
 @router.post("/signup")

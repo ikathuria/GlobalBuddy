@@ -54,6 +54,7 @@ Motto: *You didn't come this far to figure it out alone.*
 - `POST /v1/plan/generate`
 - `POST /v1/bridge/explain`
 - `GET /v1/graph/subgraph?session_id=...`
+- `PATCH /v1/auth/me/stage` advances a logged-in user's journey stage (`newcomer` -> `settler` -> `local`)
 - `GET /v1/auth/config`
 - `GET /v1/auth/me`
 - `GET /v1/progress/plan`

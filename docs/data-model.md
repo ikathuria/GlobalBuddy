@@ -83,6 +83,7 @@ Relationships are generated from:
 ## 5. Graph Scoring Inputs
 - Mentor ranking: shared country, shared university, need overlap, languages, stage fit, trust/reputation score.
 - Local-fit ranking: profile token overlap against place/event/group tags.
+- Stage fit: `arrival_date` maps to newcomer under 90 days, settler from 90 to 364 days, and local from 365 days onward; mentor is never automatic.
 - Task ordering: `depends_on` edges are topologically sorted before plan generation.
 - Aggregated API scores:
   - `support_coverage_score`
@@ -95,6 +96,7 @@ Relationships are generated from:
 - `user_profiles`: `id`, `auth_user_id`, `full_name`, `email`, `country_of_origin`, `target_university`, `target_city`, `stage`, `arrival_date`, `created_at`, `updated_at`
 
 `auth_user_id` references the user identity synced by Neon Auth.
+`stage` is inferred from `arrival_date` during profile matching and can move forward manually through `PATCH /v1/auth/me/stage`; automatic updates do not move a user backward.
 
 ### Progress and Documents
 - `plan_progress`: `user_id`, `task_id`, `completed`, `updated_at`

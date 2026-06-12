@@ -23,6 +23,7 @@ const defaultProfile = {
   linkedin_url: "",
   instagram_url: "",
   other_social_url: "",
+  arrival_date: "",
   new_to_us: true,
 };
 
@@ -189,6 +190,7 @@ export default function ProfileForm({ onMatch }) {
         linkedin_url: form.linkedin_url.trim(),
         instagram_url: form.instagram_url.trim(),
         other_social_url: form.other_social_url.trim(),
+        arrival_date: form.arrival_date,
       };
 
       const response = await client.post("/v1/profile/match", payload);
@@ -284,6 +286,16 @@ export default function ProfileForm({ onMatch }) {
                   </label>
                 </div>
               </fieldset>
+
+              <label className="gb-field gb-field--full">
+                <span>US arrival date</span>
+                <input
+                  type="date"
+                  value={form.arrival_date}
+                  onChange={(event) => update("arrival_date", event.target.value)}
+                />
+                <small>Used only to place you in Newcomer, Settler, or Local journey support.</small>
+              </label>
             </div>
           )}
 

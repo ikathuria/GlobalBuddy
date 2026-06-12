@@ -7,6 +7,7 @@ from typing import Any
 
 from app.db.postgres import PostgresDatabase
 from app.models.schemas import ProfileMatchRequest
+from app.utils.stages import infer_user_stage, normalize_stage, parse_arrival_date
 
 
 def _claim_value(claims: dict[str, Any], *keys: str) -> str:
@@ -57,18 +58,37 @@ async def update_profile_from_match(
     auth_user_id: str,
     payload: ProfileMatchRequest,
 ) -> dict[str, Any]:
+    arrival_date = parse_arrival_date(payload.arrival_date)
+    inferred_stage = infer_user_stage(arrival_date)
     row = await db.fetchrow(
         """
         insert into user_profiles (
-          auth_user_id, full_name, email, country_of_origin, target_university, target_city
+          auth_user_id, full_name, email, country_of_origin, target_university, target_city, stage, arrival_date
         )
-        values ($1, $2, $3, $4, $5, $6)
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
         on conflict (auth_user_id) do update
           set full_name = excluded.full_name,
               email = excluded.email,
               country_of_origin = excluded.country_of_origin,
               target_university = excluded.target_university,
-              target_city = excluded.target_city
+              target_city = excluded.target_city,
+              arrival_date = coalesce(excluded.arrival_date, user_profiles.arrival_date),
+              stage = case
+                when case user_profiles.stage
+                  when 'newcomer' then 0
+                  when 'settler' then 1
+                  when 'local' then 2
+                  when 'mentor' then 3
+                  else 0
+                end >= case excluded.stage
+                  when 'newcomer' then 0
+                  when 'settler' then 1
+                  when 'local' then 2
+                  when 'mentor' then 3
+                  else 0
+                end then user_profiles.stage
+                else excluded.stage
+              end
         returning *
         """,
         auth_user_id,
@@ -77,9 +97,49 @@ async def update_profile_from_match(
         payload.country_of_origin.strip(),
         payload.target_university.strip(),
         payload.target_city.strip(),
+        inferred_stage,
+        arrival_date,
     )
     if row is None:
         raise RuntimeError("Unable to persist user profile.")
+    return row
+
+
+async def advance_user_stage(
+    db: PostgresDatabase,
+    *,
+    auth_user_id: str,
+    stage: str,
+) -> dict[str, Any]:
+    target_stage = normalize_stage(stage, allow_mentor=False)
+    if target_stage is None:
+        raise ValueError("Invalid stage.")
+    row = await db.fetchrow(
+        """
+        update user_profiles
+        set stage = case
+          when case $2
+            when 'newcomer' then 0
+            when 'settler' then 1
+            when 'local' then 2
+            else 0
+          end > case stage
+            when 'newcomer' then 0
+            when 'settler' then 1
+            when 'local' then 2
+            when 'mentor' then 3
+            else 0
+          end then $2
+          else stage
+        end
+        where auth_user_id = $1
+        returning *
+        """,
+        auth_user_id,
+        target_stage,
+    )
+    if row is None:
+        raise RuntimeError("Unable to update user stage.")
     return row
 
 

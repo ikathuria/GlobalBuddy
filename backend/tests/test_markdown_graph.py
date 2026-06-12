@@ -28,12 +28,16 @@ def test_markdown_graph_profile_match_returns_chicago_evidence() -> None:
         target_city="Chicago",
         needs=["banking", "housing", "community"],
         interests=["south indian food"],
+        arrival_date="2026-02-15",
         religion_or_observance="Hindu",
         diet="vegetarian",
     )
 
     result = service.profile_match(profile)
 
+    assert result.user_stage == "settler"
+    assert result.evidence_bundle["student_profile"]["user_stage"] == "settler"
+    assert result.evidence_bundle["stage_weights"]["peer"] > result.evidence_bundle["stage_weights"]["task"]
     assert result.mentors_top3
     assert result.peers_nearby
     assert result.places_of_worship

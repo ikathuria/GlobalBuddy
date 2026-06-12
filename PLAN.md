@@ -172,11 +172,11 @@ Tasks:
 **Goal:** Users progress through defined stages (Newcomer → Settler → Local → Mentor); the platform surfaces different content and connections at each stage.
 
 Tasks:
-- [ ] Define `stage` enum in Neon `user_profiles`: `newcomer` (0–3 months), `settler` (3–12 months), `local` (1–2 years), `mentor` (opted in) — Done when: migration applied and `stage` column exists
-- [ ] Add stage detection logic in `profile_match_agent.py` — infer stage from `arrival_date` if provided, default to `newcomer` — Done when: profile match response includes `user_stage` field
-- [ ] Update Markdown graph matching weights per stage — newcomers get more mentor/task matches; settlers get more peer/social matches; locals get more community/event matches
-- [ ] Add stage progress indicator to the frontend dashboard — Done when: dashboard shows "You're a Settler — 3 more months to Local" style progress
-- [ ] Add "Upgrade my stage" prompt — after 90 days as newcomer, show a banner inviting the user to mark themselves as settled
+- [x] Define `stage` enum in Neon `user_profiles`: `newcomer` (0–3 months), `settler` (3–12 months), `local` (1–2 years), `mentor` (opted in) — Done when: migration applied and `stage` column exists
+- [x] Add stage detection logic in `profile_match_agent.py` — infer stage from `arrival_date` if provided, default to `newcomer` — Done when: profile match response includes `user_stage` field
+- [x] Update Markdown graph matching weights per stage — newcomers get more mentor/task matches; settlers get more peer/social matches; locals get more community/event matches
+- [x] Add stage progress indicator to the frontend dashboard — Done when: dashboard shows "You're a Settler — 3 more months to Local" style progress
+- [x] Add "Upgrade my stage" prompt — after 90 days as newcomer, show a banner inviting the user to mark themselves as settled
 
 ---
 

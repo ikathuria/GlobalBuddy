@@ -1791,6 +1791,31 @@ a {
   margin-bottom: 0.75rem;
 }
 
+.gb-stage-summary {
+  display: grid;
+  gap: 0.55rem;
+  margin-bottom: 0.9rem;
+}
+
+.gb-stage-summary strong {
+  font-size: 0.95rem;
+}
+
+.gb-stage-progressbar {
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.gb-stage-progressbar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gb-accent), var(--gb-accent-strong));
+  transition: width 180ms ease;
+}
+
 .gb-stage-step {
   display: flex;
   flex-direction: column;
@@ -1834,6 +1859,30 @@ a {
   margin: 0;
   font-size: 0.85rem;
   color: var(--gb-muted);
+}
+
+.gb-stage-upgrade {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.9rem;
+  padding: 0.85rem;
+  border: 1px solid rgba(14, 165, 164, 0.25);
+  border-radius: var(--gb-radius-sm);
+  background: rgba(14, 165, 164, 0.06);
+}
+
+.gb-stage-upgrade p {
+  margin: 0.2rem 0 0;
+  color: var(--gb-muted);
+  font-size: 0.85rem;
+}
+
+.gb-stage-error {
+  margin: 0.7rem 0 0;
+  color: #b91c1c;
+  font-size: 0.85rem;
 }
 
 .gb-action-grid {
@@ -1925,6 +1974,11 @@ a {
 @media (max-width: 600px) {
   .gb-stage-track {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .gb-stage-upgrade {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .gb-action-grid {

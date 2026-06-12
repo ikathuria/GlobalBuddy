@@ -22,6 +22,7 @@ class ProfileMatchRequest(BaseModel):
         default=True,
         description="Whether the student is newly arriving in the United States.",
     )
+    arrival_date: str = Field(default="", description="Optional ISO date when the student arrived or expects to arrive.")
     cultural_background: str = Field(default="", description="Optional; used for deterministic cultural-fit ranking.")
     religion_or_observance: str = Field(
         default="",
@@ -147,6 +148,7 @@ class Subgraph(BaseModel):
 
 class ProfileMatchResponse(BaseModel):
     session_id: str
+    user_stage: str = Field(default="newcomer", description="Inferred journey stage for stage-aware matching.")
     mentors_top3: list[MentorCard]
     peers_nearby: list[PeerCard]
     cultural_restaurants: list[RestaurantCard]

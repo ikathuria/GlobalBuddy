@@ -26,6 +26,7 @@ from app.models.schemas import (
     Subgraph,
     TransitTipCard,
 )
+from app.utils.stages import infer_user_stage
 
 
 WIKILINK_RE = re.compile(r"\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|[^\]]+)?\]\]")
@@ -40,6 +41,48 @@ REQUIRED_TYPES = {
     "Guide",
 }
 LOCAL_PLACE_TYPES = {"PlaceOfWorship", "GroceryStore", "HousingArea", "ExplorationSpot"}
+STAGE_CATEGORY_WEIGHTS = {
+    "newcomer": {
+        "mentor": 1.18,
+        "resource": 1.14,
+        "task": 1.12,
+        "peer": 0.92,
+        "event": 0.94,
+        "community_group": 0.98,
+        "local": 1.0,
+    },
+    "settler": {
+        "mentor": 1.02,
+        "resource": 0.98,
+        "task": 0.96,
+        "peer": 1.18,
+        "event": 1.12,
+        "community_group": 1.18,
+        "local": 1.04,
+    },
+    "local": {
+        "mentor": 0.94,
+        "resource": 0.9,
+        "task": 0.88,
+        "peer": 1.06,
+        "event": 1.2,
+        "community_group": 1.18,
+        "local": 1.18,
+    },
+    "mentor": {
+        "mentor": 0.86,
+        "resource": 0.86,
+        "task": 0.84,
+        "peer": 1.04,
+        "event": 1.18,
+        "community_group": 1.22,
+        "local": 1.2,
+    },
+}
+
+
+def _stage_weight(stage: str, category: str) -> float:
+    return STAGE_CATEGORY_WEIGHTS.get(stage, STAGE_CATEGORY_WEIGHTS["newcomer"]).get(category, 1.0)
 
 
 @dataclass(frozen=True)
@@ -243,18 +286,19 @@ class MarkdownGraphService:
         city = profile.target_city.strip()
         needs = [n.strip().lower() for n in profile.needs if n.strip()]
         tokens = _profile_tokens(profile)
+        user_stage = infer_user_stage(profile.arrival_date)
 
-        mentors_top3 = self._mentor_cards(country, country_code, uni, needs)
+        mentors_top3 = self._mentor_cards(country, country_code, uni, needs, user_stage)
         peers_nearby = self._peer_cards(uni, city)
         cultural_restaurants = self._restaurant_cards(country, country_code, city)
-        community_events = self._event_cards(country, country_code, city)
+        community_events = self._event_cards(country, country_code, city, user_stage)
         resources = self._resource_cards(needs, city)
-        places_of_worship = self._local_place_cards("PlaceOfWorship", "worship", city, tokens, country, needs, uni)
-        grocery_stores = self._local_place_cards("GroceryStore", "grocery", city, tokens, country, needs, uni)
-        housing_areas = self._local_place_cards("HousingArea", "housing", city, tokens, country, needs, uni)
-        exploration_spots = self._local_place_cards("ExplorationSpot", "exploration", city, tokens, country, needs, uni)
+        places_of_worship = self._local_place_cards("PlaceOfWorship", "worship", city, tokens, country, needs, uni, user_stage)
+        grocery_stores = self._local_place_cards("GroceryStore", "grocery", city, tokens, country, needs, uni, user_stage)
+        housing_areas = self._local_place_cards("HousingArea", "housing", city, tokens, country, needs, uni, user_stage)
+        exploration_spots = self._local_place_cards("ExplorationSpot", "exploration", city, tokens, country, needs, uni, user_stage)
         transit_tips = self._transit_cards(city, tokens)
-        community_groups = self._community_group_cards(country, country_code, uni, city)
+        community_groups = self._community_group_cards(country, country_code, uni, city, user_stage)
         tasks_ordered = self.tasks_ordered(city)
         local_entities = self.nodes_by_type("LocalEntity", city)
         guides = self.nodes_by_type("Guide", city)
@@ -269,6 +313,8 @@ class MarkdownGraphService:
             "needs": needs,
             "interests": profile.interests,
             "new_to_us": bool(profile.new_to_us),
+            "arrival_date": profile.arrival_date,
+            "user_stage": user_stage,
             "cultural_background": profile.cultural_background,
             "religion_or_observance": profile.religion_or_observance,
             "diet": profile.diet,
@@ -279,6 +325,8 @@ class MarkdownGraphService:
 
         evidence_bundle: dict[str, Any] = {
             "graph_source": "markdown",
+            "user_stage": user_stage,
+            "stage_weights": STAGE_CATEGORY_WEIGHTS.get(user_stage, STAGE_CATEGORY_WEIGHTS["newcomer"]),
             "mentors": [m.model_dump() for m in mentors_top3],
             "peers": [p.model_dump() for p in peers_nearby],
             "restaurants": [r.model_dump() for r in cultural_restaurants],
@@ -320,6 +368,7 @@ class MarkdownGraphService:
             local_places=[*places_of_worship, *grocery_stores, *housing_areas, *exploration_spots],
             community_groups=community_groups,
             cultural_fit_score=cultural_fit_score,
+            user_stage=user_stage,
         )
 
         best_weekend_outing = ""
@@ -330,6 +379,7 @@ class MarkdownGraphService:
 
         return ProfileMatchResponse(
             session_id=session_id,
+            user_stage=user_stage,
             mentors_top3=mentors_top3,
             peers_nearby=peers_nearby,
             cultural_restaurants=cultural_restaurants,
@@ -541,7 +591,7 @@ class MarkdownGraphService:
                     index[key] = node.id
         return index
 
-    def _mentor_cards(self, country: str, country_code: str, uni: str, needs: list[str]) -> list[MentorCard]:
+    def _mentor_cards(self, country: str, country_code: str, uni: str, needs: list[str], user_stage: str) -> list[MentorCard]:
         ranked: list[tuple[float, MarkdownNode, list[str]]] = []
         for node in self.nodes_by_type("Mentor"):
             data = node.data
@@ -554,7 +604,11 @@ class MarkdownGraphService:
             covered = _lower_set(data.get("needs"))
             overlap = len(covered & set(needs)) / max(len(needs), 1) if needs else 0.5
             trust = float(data.get("trust_score") or 0.0)
-            score = _mentor_score(shared_country=shared_country, shared_uni=shared_uni, need_overlap=overlap, trust_score=trust)
+            score = min(
+                1.0,
+                _mentor_score(shared_country=shared_country, shared_uni=shared_uni, need_overlap=overlap, trust_score=trust)
+                * _stage_weight(user_stage, "mentor"),
+            )
             reasons = []
             if shared_country:
                 reasons.append("Shared home country context")
@@ -622,15 +676,14 @@ class MarkdownGraphService:
         cards.sort(key=lambda item: (item.distance_km, item.name))
         return cards[:8]
 
-    def _event_cards(self, country: str, country_code: str, city: str) -> list[EventCard]:
-        cards: list[EventCard] = []
+    def _event_cards(self, country: str, country_code: str, city: str, user_stage: str) -> list[EventCard]:
+        scored: list[tuple[float, EventCard]] = []
         for node in self.nodes_by_type("Event", city):
             tags = _as_str_list(node.data.get("country_tags"))
             if tags and not (_text_matches(country, tags) or _text_matches(country_code, tags) or _text_matches("US", tags)):
                 continue
             data = node.data
-            cards.append(
-                EventCard(
+            card = EventCard(
                     id=node.id,
                     name=node.title,
                     start_time=str(data.get("start_time") or ""),
@@ -640,8 +693,12 @@ class MarkdownGraphService:
                     maps_query=str(data.get("maps_query") or ""),
                     maps_link=_maps_url(data),
                 )
-            )
-        return cards[:12]
+            stage_score = _stage_weight(user_stage, "event")
+            if str(data.get("category") or "").lower() in {"orientation", "arrival"} and user_stage == "newcomer":
+                stage_score += 0.08
+            scored.append((stage_score, card))
+        scored.sort(key=lambda item: (-item[0], item[1].name))
+        return [card for _, card in scored[:12]]
 
     def _resource_cards(self, needs: list[str], city: str) -> list[ResourceCard]:
         cards: list[ResourceCard] = []
@@ -668,6 +725,7 @@ class MarkdownGraphService:
         country: str,
         needs: list[str],
         uni: str,
+        user_stage: str,
     ) -> list[LocalPlaceCard]:
         scored: list[tuple[float, LocalPlaceCard]] = []
         for node in self.nodes_by_type(node_type, city):
@@ -678,7 +736,7 @@ class MarkdownGraphService:
             country_boost = 0.2 if _text_matches(country, data.get("country_tags")) else 0.0
             uni_boost = 0.18 if _text_matches(uni, data.get("university_tags")) else 0.0
             need_boost = 0.15 if any(_text_matches(need, tags) for need in needs) else 0.0
-            score = min(1.0, 0.12 + tag_score * 0.65 + country_boost + uni_boost + need_boost)
+            score = min(1.0, (0.12 + tag_score * 0.65 + country_boost + uni_boost + need_boost) * _stage_weight(user_stage, "local"))
             fallback = "Markdown graph node; verify hours, access, and details before visiting."
             lat, lon = data.get("latitude"), data.get("longitude")
             scored.append(
@@ -728,22 +786,22 @@ class MarkdownGraphService:
         scored.sort(key=lambda item: (-item[0], item[1].name))
         return [card for _, card in scored[:6]]
 
-    def _community_group_cards(self, country: str, country_code: str, uni: str, city: str) -> list[CommunityGroupCard]:
-        cards: list[CommunityGroupCard] = []
+    def _community_group_cards(self, country: str, country_code: str, uni: str, city: str, user_stage: str) -> list[CommunityGroupCard]:
+        scored: list[tuple[float, CommunityGroupCard]] = []
         for node in self.nodes_by_type("CommunityGroup", city):
             tags = [*_as_str_list(node.data.get("country_tags")), *_as_str_list(node.data.get("university_tags"))]
             if tags and not (_text_matches(country, tags) or _text_matches(country_code, tags) or _text_matches(uni, tags)):
                 continue
-            cards.append(
-                CommunityGroupCard(
+            card = CommunityGroupCard(
                     id=node.id,
                     name=node.title,
                     platform=str(node.data.get("platform") or ""),
                     join_url=str(node.data.get("join_url") or ""),
-                    why_recommended="Matched by city, university, or country context. Verify moderation before joining.",
+                    why_recommended=f"Matched by city, university, country, and {user_stage} journey stage. Verify moderation before joining.",
                 )
-            )
-        return cards[:8]
+            scored.append((_stage_weight(user_stage, "community_group"), card))
+        scored.sort(key=lambda item: (-item[0], item[1].name))
+        return [card for _, card in scored[:8]]
 
     def _build_profile_subgraph(
         self,
@@ -904,6 +962,7 @@ class MarkdownGraphService:
         local_places: list[LocalPlaceCard],
         community_groups: list[CommunityGroupCard],
         cultural_fit_score: float,
+        user_stage: str,
     ) -> float:
         mentor_cov = min(1.0, len(mentors_top3) / 3) if mentors_top3 else 0.0
         peer_p = min(1.0, len(peers_nearby) / 5)
@@ -911,13 +970,20 @@ class MarkdownGraphService:
         food_p = min(1.0, len(cultural_restaurants) / 5)
         local_p = min(1.0, len(local_places) / 14)
         group_p = min(1.0, len(community_groups) / 3)
+        weights = {
+            "newcomer": (0.16, 0.12, 0.12, 0.28, 0.16, 0.08, 0.10),
+            "settler": (0.24, 0.18, 0.12, 0.14, 0.12, 0.18, 0.04),
+            "local": (0.16, 0.24, 0.10, 0.10, 0.22, 0.20, 0.08),
+            "mentor": (0.14, 0.24, 0.08, 0.08, 0.22, 0.22, 0.08),
+        }.get(user_stage, (0.16, 0.12, 0.12, 0.28, 0.16, 0.08, 0.10))
+        peer_w, event_w, food_w, mentor_w, local_w, group_w, fit_w = weights
         return round(
-            0.18 * peer_p
-            + 0.14 * event_p
-            + 0.14 * food_p
-            + 0.18 * mentor_cov
-            + 0.14 * local_p
-            + 0.10 * group_p
-            + 0.12 * cultural_fit_score,
+            peer_w * peer_p
+            + event_w * event_p
+            + food_w * food_p
+            + mentor_w * mentor_cov
+            + local_w * local_p
+            + group_w * group_p
+            + fit_w * cultural_fit_score,
             3,
         )

@@ -21,6 +21,7 @@ Runs profile matching, local-intelligence ranking, and session creation from gra
   "needs": ["banking", "housing", "community"],
   "interests": ["south indian food", "hackathons", "tech meetups"],
   "new_to_us": true,
+  "arrival_date": "2026-02-15",
   "cultural_background": "South Indian",
   "religion_or_observance": "Hindu",
   "diet": "vegetarian",
@@ -34,6 +35,7 @@ Runs profile matching, local-intelligence ranking, and session creation from gra
 ```json
 {
   "session_id": "uuid",
+  "user_stage": "settler",
   "mentors_top3": [],
   "peers_nearby": [],
   "cultural_restaurants": [],
@@ -192,11 +194,28 @@ Requires `Authorization: Bearer <token>`.
 ## 9. Auth Endpoints
 - `GET /v1/auth/config`
 - `GET /v1/auth/me`
+- `PATCH /v1/auth/me/stage`
 - `GET /v1/auth/linkedin/profile`
 - `POST /v1/auth/signup` returns `501`; use the Neon Auth frontend SDK on `/auth`
 - `POST /v1/auth/login` returns `501`; use the Neon Auth frontend SDK on `/auth`
 
 Auth is backed by Neon Auth. FastAPI verifies JWTs through the configured Neon Auth JWKS and resolves the app profile in Neon Postgres.
+
+### PATCH `/v1/auth/me/stage`
+Requires `Authorization: Bearer <token>`. Manually advances the user journey stage to `settler` or `local`; the endpoint does not allow mentor opt-in because that is handled by the mentor flow.
+
+```json
+{ "stage": "settler" }
+```
+
+```json
+{
+  "profile": {
+    "stage": "settler",
+    "arrival_date": "2026-02-15"
+  }
+}
+```
 
 ### GET `/v1/auth/linkedin/profile`
 Requires `Authorization: Bearer <token>`. Returns claim-derived prefill fields and never writes profile data by itself.

@@ -23,6 +23,7 @@ from app.models.schemas import (
     Subgraph,
     TransitTipCard,
 )
+from app.utils.stages import infer_user_stage
 
 logger = logging.getLogger(__name__)
 
@@ -41,6 +42,8 @@ SET
   session.needs = $needs,
   session.interests = $interests,
   session.new_to_us = $new_to_us,
+  session.arrival_date = $arrival_date,
+  session.user_stage = $user_stage,
   session.cultural_background = $cultural_background,
   session.religion_or_observance = $religion_or_observance,
   session.diet = $diet,
@@ -60,6 +63,8 @@ SET
   student.needs = $needs,
   student.interests = $interests,
   student.new_to_us = $new_to_us,
+  student.arrival_date = $arrival_date,
+  student.user_stage = $user_stage,
   student.cultural_background = $cultural_background,
   student.religion_or_observance = $religion_or_observance,
   student.diet = $diet,
@@ -248,6 +253,7 @@ async def _persist_profile_to_db(
     session_id: str,
     profile: ProfileMatchRequest,
     needs: list[str],
+    user_stage: str,
 ) -> None:
     try:
         await neo4j.query_write(
@@ -264,6 +270,8 @@ async def _persist_profile_to_db(
                 "needs": needs,
                 "interests": [i.strip() for i in profile.interests if i and i.strip()],
                 "new_to_us": bool(profile.new_to_us),
+                "arrival_date": profile.arrival_date.strip(),
+                "user_stage": user_stage,
                 "cultural_background": profile.cultural_background.strip(),
                 "religion_or_observance": profile.religion_or_observance.strip(),
                 "diet": profile.diet.strip(),
@@ -294,6 +302,7 @@ async def run_profile_match(
     city = profile.target_city.strip()
     needs = [n.strip().lower() for n in profile.needs if n.strip()]
     profile_tok = _profile_tokens(profile)
+    user_stage = infer_user_stage(profile.arrival_date)
 
     mentor_rows = await neo4j.query(
         """
@@ -629,6 +638,8 @@ async def run_profile_match(
         "needs": needs,
         "interests": profile.interests,
         "new_to_us": bool(profile.new_to_us),
+        "arrival_date": profile.arrival_date,
+        "user_stage": user_stage,
         "cultural_background": profile.cultural_background,
         "religion_or_observance": profile.religion_or_observance,
         "diet": profile.diet,
@@ -642,6 +653,7 @@ async def run_profile_match(
         session_id=session_id,
         profile=profile,
         needs=needs,
+        user_stage=user_stage,
     )
 
     evidence_bundle: dict[str, Any] = {
@@ -824,6 +836,7 @@ async def run_profile_match(
 
     return ProfileMatchResponse(
         session_id=session_id,
+        user_stage=user_stage,
         mentors_top3=mentors_top3,
         peers_nearby=peers_nearby,
         cultural_restaurants=cultural_restaurants,

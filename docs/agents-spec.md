@@ -20,6 +20,7 @@ Build deterministic graph-backed recommendations from the Markdown graph index a
 
 ### Inputs
 - `ProfileMatchRequest`
+- `arrival_date` is optional; if present it is used to infer `user_stage`
 - Markdown graph index
 - Optional logged-in user profile from Neon Postgres
 
@@ -28,6 +29,7 @@ Build deterministic graph-backed recommendations from the Markdown graph index a
 - local intelligence lists: `places_of_worship`, `grocery_stores`, `housing_areas`, `exploration_spots`, `transit_tips`, `community_groups`
 - ranking scores: `support_coverage_score`, `belonging_score`, `cultural_fit_score`
 - `best_weekend_outing`
+- `user_stage` (`newcomer`, `settler`, `local`; `mentor` only through opt-in)
 - `subgraph` with normalized nodes and edges
 
 ### Deterministic Ranking Policy

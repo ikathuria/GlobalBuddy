@@ -52,6 +52,7 @@ def test_profile_match_endpoint_shape(api_client: object, monkeypatch: pytest.Mo
     assert r.status_code == 200
     data = r.json()
     assert data["session_id"]
+    assert data["user_stage"] == "newcomer"
     assert "mentors_top3" in data
     assert "peers_nearby" in data
     assert "cultural_restaurants" in data
