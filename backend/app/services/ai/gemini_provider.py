@@ -56,42 +56,40 @@ class GeminiProvider:
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
 
+    async def _generate(self, prompt: str, *, temperature: float, json_output: bool) -> str:
+        from google import genai
+
+        client = genai.Client(api_key=self._settings.gemini_api_key)
+        config: dict[str, Any] = {"temperature": temperature}
+        if json_output:
+            config["response_mime_type"] = "application/json"
+
+        def _call() -> str:
+            response = client.models.generate_content(
+                model=self._settings.gemini_model,
+                contents=prompt,
+                config=config,
+            )
+            return response.text or ""
+
+        return await asyncio.to_thread(_call)
+
     async def generate_plan(
         self,
         evidence_bundle: dict[str, Any],
         student_profile: dict[str, Any],
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        import google.generativeai as genai
-
-        genai.configure(api_key=self._settings.gemini_api_key)
-        model = genai.GenerativeModel(self._settings.gemini_model)
         user_blob = json.dumps(
             {"student_profile": student_profile, "evidence_bundle": evidence_bundle},
             ensure_ascii=False,
         )
         prompt = f"{_JUDGE_PROMPT}\n\nDATA:\n{user_blob}"
-
-        def _call() -> str:
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json",
-                    temperature=0.35,
-                ),
-            )
-            return response.text or ""
-
-        text = await asyncio.to_thread(_call)
+        text = await self._generate(prompt, temperature=0.35, json_output=True)
         parsed = extract_json_object(text) or {}
         return parsed, {"provider": self.name, "model": self._settings.gemini_model}
 
     async def chat_reply(self, history: list[dict], message: str) -> str:
         """Free-text conversational reply given chat history + new message."""
-        import google.generativeai as genai
-
-        genai.configure(api_key=self._settings.gemini_api_key)
-        model = genai.GenerativeModel(self._settings.gemini_model)
-
         lines = [_CHAT_SYSTEM, ""]
         for msg in history:
             role = "Student" if msg["role"] == "user" else "Assistant"
@@ -99,15 +97,7 @@ class GeminiProvider:
         lines.append(f"Student: {message}")
         lines.append("Assistant:")
         prompt = "\n".join(lines)
-
-        def _call() -> str:
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(temperature=0.6),
-            )
-            return response.text or ""
-
-        return await asyncio.to_thread(_call)
+        return await self._generate(prompt, temperature=0.6, json_output=False)
 
     async def explain_term(
         self,
@@ -115,26 +105,11 @@ class GeminiProvider:
         home_country: str,
         context: str,
     ) -> tuple[dict[str, Any], dict[str, Any]]:
-        import google.generativeai as genai
-
-        genai.configure(api_key=self._settings.gemini_api_key)
-        model = genai.GenerativeModel(self._settings.gemini_model)
         prompt = (
             f"{_BRIDGE_PROMPT}\n\n"
             f"term: {term}\nhome_country: {home_country}\ncontext: {context}\n"
             "No legal guarantees. Plain language."
         )
-
-        def _call() -> str:
-            response = model.generate_content(
-                prompt,
-                generation_config=genai.GenerationConfig(
-                    response_mime_type="application/json",
-                    temperature=0.3,
-                ),
-            )
-            return response.text or ""
-
-        text = await asyncio.to_thread(_call)
+        text = await self._generate(prompt, temperature=0.3, json_output=True)
         parsed = extract_json_object(text) or {}
         return parsed, {"provider": self.name, "model": self._settings.gemini_model}
