@@ -235,11 +235,11 @@ Tasks:
 **Goal:** Settled users can opt in as mentors; newcomers get matched to them; mentors build a reputation over time.
 
 Tasks:
-- [ ] Add `mentor_profiles` table to Neon Postgres: `{user_id, expertise[], availability, bio, response_rate, intro_count, rating, opted_in_at}`
-- [ ] Add `/become-mentor` page and flow — requires `stage` = `settler`, `local`, or `mentor`
-- [ ] Merge opted-in Neon mentor profiles with Markdown seed mentors in `profile_match_agent.py`
-- [ ] Add mentor rating flow — after an accepted connection is 7 days old, prompt newcomer to rate mentor and update `mentor_profiles.rating`
-- [ ] Add `/mentors` public directory page — lists opted-in mentors filterable by city, university, country of origin, expertise
+- [x] Add `mentor_profiles` table to Neon Postgres: `{user_id, expertise[], availability, bio, response_rate, intro_count, rating, opted_in_at}` — defined in `001`; `mentor_ratings` too
+- [x] Add `/become-mentor` page and flow — requires `stage` = `settler`, `local`, or `mentor`; opt-in sets stage → `mentor` and supports pause/resume via availability
+- [~] Merge opted-in Neon mentor profiles with Markdown seed mentors — merged in the **`GET /v1/mentors` directory** (seed + Neon). Deferred merging into the per-session profile-match *ranking*: the Markdown graph service has no Neon handle, so injecting live mentors into `profile_match` ranking is a follow-up (see note below)
+- [~] Add mentor rating flow — `POST /v1/mentors/{id}/rate` upserts a rating and recomputes `mentor_profiles.rating`. Surfaced as a rating action on the directory rather than the 7-day accepted-connection prompt (seed mentors can't "accept"; see note)
+- [x] Add `/mentors` public directory page — lists seed + opted-in mentors filterable by city, university, country of origin, expertise
 
 ---
 
@@ -325,7 +325,8 @@ claude "Read PLAN.md. Without building anything new, test everything marked done
 - **Auth token flow:** Neon Auth issues a JWT on login. The frontend sends it as `Authorization: Bearer <token>` on protected API calls. FastAPI verifies against the configured Neon Auth JWKS.
 - **Gemini vs Groq routing:** Use Gemini 2.5 Flash for plan generation and multi-turn chat (needs high token count). Use Groq for cultural bridge one-off lookups (needs low latency). The existing provider factory handles this — add a `prefer_speed` flag to the AI call.
 - **Stage progression:** Stage is set by the backend based on `arrival_date`. Users can also manually advance their stage. Never let stage go backward automatically.
-- **Mentor opt-in only:** Never auto-graduate a user to mentor. It must be an explicit opt-in action. Mentors can pause or deactivate their availability without losing their history.
+- **Mentor opt-in only:** Never auto-graduate a user to mentor. It must be an explicit opt-in action. Mentors can pause or deactivate their availability without losing their history. (M13: `POST /v1/mentors/opt-in` sets stage → `mentor`; `PATCH /v1/mentors/me/availability` toggles `available`/`paused`.)
+- **Mentor merge & rating scope (M13):** Seed and opted-in mentors are merged in the `/v1/mentors` directory only. Two deferrals, both rooted in the seed-vs-real-user split: (1) the per-session `profile_match` ranking still uses only Markdown seed mentors because the graph service has no Neon connection — injecting live mentors needs a db handle in the graph layer or a post-rank merge step in the profile router; (2) rating is a direct directory action gated to real (Neon) mentors instead of the planned "7-day-old accepted connection" prompt, because seed-mentor intro requests have no real counterpart to accept. Both become natural once intro recipients resolve to real users.
 - **LinkedIn OAuth scope:** Basic OIDC (`openid profile email`) works without app review. Education history endpoint requires LinkedIn review (1–4 weeks). Build pre-fill to work without education data and treat university pre-fill as a bonus.
 - **Neo4j optionality:** Keep the existing Neo4j/Cypher implementation only as a legacy adapter or future upgrade path. The MVP should run without graph database credentials.
 - **Branding:** Product-facing name is **Globalदोस्त**. Code identifiers use `globaldost` or `globalbuddy`. Only update UI copy strings, never rename code symbols.

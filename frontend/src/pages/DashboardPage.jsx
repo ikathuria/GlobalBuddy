@@ -16,7 +16,7 @@ const QUICK_ACTIONS = [
   { label: "Pre-Arrival Checklist", desc: "Prepare before you land", href: "/pre-arrival", icon: "✈️", ready: true },
   { label: "AI Chat", desc: "Ask anything about US life", href: "/chat", icon: "💬", ready: true },
   { label: "My Connections", desc: "Track your intro and connection requests", href: "/connections", icon: "🤝", ready: true },
-  { label: "Find Mentors", desc: "Connect with settled students", href: "/mentors", icon: "👥", ready: false },
+  { label: "Find Mentors", desc: "Connect with settled students", href: "/mentors", icon: "👥", ready: true },
   { label: "Discover Feed", desc: "Events and guides in your city", href: "/feed", icon: "🌆", ready: true },
 ];
 

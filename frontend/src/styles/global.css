@@ -2506,6 +2506,110 @@ a {
   margin-top: 0.4rem;
 }
 
+/* ── Mentor system (M13) ─────────────────────────────────────────────────────── */
+
+.gb-mentor-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 1rem 1.2rem;
+  align-items: center;
+}
+
+.gb-mentor-filters input {
+  flex: 1 1 140px;
+  min-width: 120px;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--gb-border);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.gb-mentor-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.1rem 1.2rem;
+}
+
+.gb-mentor-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.gb-mentor-card__meta {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--gb-muted);
+}
+
+.gb-mentor-card__bio {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.gb-stars {
+  color: var(--gb-accent);
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.gb-stars__empty {
+  color: var(--gb-border);
+}
+
+.gb-mentor-rate {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.8rem;
+  color: var(--gb-muted);
+  flex-wrap: wrap;
+}
+
+.gb-mentor-rate__star {
+  border: 1px solid var(--gb-border);
+  background: var(--gb-surface);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.gb-mentor-rate__done {
+  font-size: 0.82rem;
+  color: var(--gb-accent-strong);
+  font-weight: 600;
+}
+
+.gb-mentor-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-width: 560px;
+}
+
+.gb-mentor-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.gb-mentor-form input,
+.gb-mentor-form select,
+.gb-mentor-form textarea {
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--gb-border);
+  border-radius: 8px;
+  font: inherit;
+}
+
 /* ── Chat page ─────────────────────────────────────────────────────────── */
 
 .gb-chat-layout {

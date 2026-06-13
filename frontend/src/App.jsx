@@ -8,6 +8,8 @@ import PreArrivalPage from "./pages/PreArrivalPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
 import ConnectionsPage from "./pages/ConnectionsPage.jsx";
 import FeedPage from "./pages/FeedPage.jsx";
+import MentorsPage from "./pages/MentorsPage.jsx";
+import BecomeMentorPage from "./pages/BecomeMentorPage.jsx";
 import PublicProfilePage from "./pages/PublicProfilePage.jsx";
 
 class ErrorBoundary extends Component {
@@ -63,6 +65,8 @@ export default function App() {
           <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/saved" element={<FeedPage savedOnly />} />
+          <Route path="/mentors" element={<MentorsPage />} />
+          <Route path="/become-mentor" element={<BecomeMentorPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

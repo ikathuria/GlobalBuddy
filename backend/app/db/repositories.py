@@ -331,6 +331,101 @@ async def list_social_requests(db: PostgresDatabase, *, requester_id: str) -> li
     )
 
 
+async def opt_in_mentor(
+    db: PostgresDatabase,
+    *,
+    user_id: str,
+    expertise: list[str],
+    availability: str,
+    bio: str,
+) -> dict[str, Any]:
+    row = await db.fetchrow(
+        """
+        insert into mentor_profiles (user_id, expertise, availability, bio)
+        values ($1, $2, $3, $4)
+        on conflict (user_id) do update
+          set expertise = excluded.expertise,
+              availability = excluded.availability,
+              bio = excluded.bio
+        returning user_id, expertise, availability, bio, response_rate, intro_count, rating, opted_in_at
+        """,
+        user_id,
+        expertise,
+        availability,
+        bio,
+    )
+    if row is None:
+        raise RuntimeError("Unable to persist mentor profile.")
+    # Opting in is the explicit, non-automatic path to the mentor stage.
+    await db.execute("update user_profiles set stage = 'mentor' where id = $1", user_id)
+    return row
+
+
+async def set_mentor_availability(db: PostgresDatabase, *, user_id: str, availability: str) -> dict[str, Any] | None:
+    return await db.fetchrow(
+        """
+        update mentor_profiles set availability = $2 where user_id = $1
+        returning user_id, expertise, availability, bio, response_rate, intro_count, rating, opted_in_at
+        """,
+        user_id,
+        availability,
+    )
+
+
+async def get_mentor_profile(db: PostgresDatabase, *, user_id: str) -> dict[str, Any] | None:
+    return await db.fetchrow(
+        """
+        select user_id, expertise, availability, bio, response_rate, intro_count, rating, opted_in_at
+        from mentor_profiles where user_id = $1
+        """,
+        user_id,
+    )
+
+
+async def list_mentor_profiles(db: PostgresDatabase) -> list[dict[str, Any]]:
+    """Opted-in mentors joined with their public profile fields."""
+    return await db.fetch(
+        """
+        select
+          mp.user_id, mp.expertise, mp.availability, mp.bio, mp.rating, mp.intro_count,
+          up.full_name, up.country_of_origin, up.target_university, up.target_city
+        from mentor_profiles mp
+        join user_profiles up on up.id = mp.user_id
+        order by mp.rating desc, mp.intro_count desc
+        """
+    )
+
+
+async def add_mentor_rating(
+    db: PostgresDatabase,
+    *,
+    mentor_id: str,
+    reviewer_id: str,
+    rating: int,
+    comment: str = "",
+) -> float:
+    """Upsert a rating and recompute the mentor's average. Returns the new average."""
+    await db.execute(
+        """
+        insert into mentor_ratings (mentor_id, reviewer_id, rating, comment)
+        values ($1, $2, $3, $4)
+        on conflict (mentor_id, reviewer_id) do update
+          set rating = excluded.rating, comment = excluded.comment
+        """,
+        mentor_id,
+        reviewer_id,
+        rating,
+        comment,
+    )
+    row = await db.fetchrow(
+        "select coalesce(avg(rating), 0)::float as avg from mentor_ratings where mentor_id = $1",
+        mentor_id,
+    )
+    new_avg = float(row["avg"]) if row else 0.0
+    await db.execute("update mentor_profiles set rating = $2 where user_id = $1", mentor_id, new_avg)
+    return round(new_avg, 2)
+
+
 async def list_content_items(
     db: PostgresDatabase,
     *,
