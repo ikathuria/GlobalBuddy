@@ -120,14 +120,16 @@ export default function NotificationBell() {
           ) : (
             <ul className="gb-bell__list">
               {items.map((n) => (
-                <li
-                  key={n.id}
-                  className={`gb-bell__item ${n.read ? "" : "gb-bell__item--unread"}`}
-                  onClick={() => markRead(n)}
-                >
-                  <strong>{n.title}</strong>
-                  {n.body && <p>{n.body}</p>}
-                  <span className="gb-bell__time">{timeAgo(n.created_at)}</span>
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    className={`gb-bell__item ${n.read ? "" : "gb-bell__item--unread"}`}
+                    onClick={() => markRead(n)}
+                  >
+                    <strong>{n.title}</strong>
+                    {n.body && <p>{n.body}</p>}
+                    <span className="gb-bell__time">{timeAgo(n.created_at)}</span>
+                  </button>
                 </li>
               ))}
             </ul>

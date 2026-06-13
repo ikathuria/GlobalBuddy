@@ -2695,9 +2695,21 @@ a {
 }
 
 .gb-bell__item {
+  display: block;
+  width: 100%;
+  text-align: left;
   padding: 0.7rem 0.9rem;
+  border: none;
   border-bottom: 1px solid var(--gb-border);
+  background: transparent;
   cursor: pointer;
+  font: inherit;
+  color: inherit;
+}
+
+.gb-bell__item:focus-visible {
+  outline: 2px solid var(--gb-accent);
+  outline-offset: -2px;
 }
 
 .gb-bell__item p {

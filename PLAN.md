@@ -272,13 +272,13 @@ Tasks:
 **Goal:** Platform is live at a public URL; Neon, Markdown graph data, AI providers, and optional email/storage services are connected in production.
 
 Tasks:
-- [ ] Build frontend with `npm run build` and deploy `frontend/dist` to Vercel — Done when: public Vercel URL loads the app
-- [ ] Deploy FastAPI backend to Railway/Render/Fly with all env vars set via platform secrets — Done when: `GET /health`, `GET /health/graph`, and `GET /health/providers` return expected statuses
-- [ ] Configure Neon production database, migrations, and Neon Auth keys — Done when: signup/login works on the production URL
-- [ ] Set `VITE_API_BASE_URL` and Neon Auth client env vars in Vercel — Done when: frontend API calls authenticate successfully in production
-- [ ] Configure custom domain (if available) on Vercel — Done when: app loads at the custom domain with HTTPS
-- [ ] Smoke-test the full platform flow on production: signup → onboarding → plan → explore → chat → connection request → feed
-- [ ] Add deploy config (`railway.toml`, Render blueprint, or Fly config) to repo root for reproducible backend deploys
+- [x] Add deploy config to the repo for reproducible deploys — `backend/Procfile`, `backend/railway.toml`, `backend/runtime.txt`, `render.yaml` (both services), `frontend/vercel.json` (SPA rewrites), and `docs/DEPLOYMENT.md` with step-by-step instructions
+- [ ] Build frontend with `npm run build` and deploy `frontend/dist` to Vercel — **blocked on user's Vercel account**; build verified locally and `vercel.json` ready
+- [ ] Deploy FastAPI backend to Railway/Render/Fly with all env vars set via platform secrets — **blocked on user's Railway/Render account**; config ready, `GET /health|/health/graph|/health/providers` exist
+- [ ] Configure Neon production database, migrations, and Neon Auth keys — **blocked on user's Neon account**; `python -m app.db.migrate` applies `001`–`003` (see DEPLOYMENT.md)
+- [ ] Set `VITE_API_BASE_URL` and Neon Auth client env vars in Vercel — **blocked on deploy**
+- [ ] Configure custom domain (if available) on Vercel — **blocked on deploy**
+- [ ] Smoke-test the full platform flow on production: signup → onboarding → plan → explore → chat → connection request → feed — **blocked on deploy**
 
 ---
 
