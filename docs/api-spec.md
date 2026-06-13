@@ -202,6 +202,49 @@ Requires `Authorization: Bearer <token>`.
 { "status": "done" }
 ```
 
+## 8b. Social Endpoints (M11)
+All require `Authorization: Bearer <token>`. Requests target Markdown graph entities (seed mentors/peers) identified by node id and are recorded against the requester in `social_requests`.
+
+### POST `/v1/social/connect`
+Records a connection request to a peer. `target_name`/`target_role` fall back to the graph node when omitted.
+
+```json
+{ "target_node_id": "peer_arjun_mehta", "target_name": "Arjun Mehta", "target_role": "Peer", "message": "" }
+```
+
+Returns the stored request:
+
+```json
+{
+  "id": "uuid",
+  "kind": "connection",
+  "target_node_id": "peer_arjun_mehta",
+  "target_name": "Arjun Mehta",
+  "target_role": "Peer",
+  "status": "pending",
+  "email_sent": false,
+  "created_at": "2026-06-12T00:00:00+00:00"
+}
+```
+
+### POST `/v1/social/intro-request`
+Records a mentor intro request and sends a templated email to the mentor via Resend. The mentor's email address is read from the graph node server-side and is **never** returned to the client. `404` if the mentor node id is unknown. `email_sent` is `false` when `RESEND_API_KEY` is unset or a duplicate request already existed.
+
+```json
+{ "mentor_node_id": "mentor_priya_shah", "message": "I'd love advice on banking." }
+```
+
+```json
+{ "id": "uuid", "kind": "intro", "target_name": "Priya Shah", "status": "pending", "email_sent": true, "created_at": "2026-06-12T00:00:00+00:00" }
+```
+
+### GET `/v1/social/requests`
+Lists the current user's connection and intro requests, newest first.
+
+```json
+{ "items": [ { "id": "uuid", "kind": "intro", "target_name": "Priya Shah", "status": "pending", "email_sent": true, "created_at": "..." } ] }
+```
+
 ## 9. Auth Endpoints
 - `GET /v1/auth/config`
 - `GET /v1/auth/me`

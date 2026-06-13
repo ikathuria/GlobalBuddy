@@ -112,8 +112,8 @@ Profile match evidence and subgraphs are cached here for 24 hours by default so 
 - `chat_messages`: `id`, `user_id`, `session_id`, `role`, `content`, `created_at`
 
 ### Social
-- `connections`: `id`, `requester_id`, `recipient_id`, `status`, `created_at`, `updated_at`
-- `intro_requests`: `id`, `requester_id`, `mentor_id`, `status`, `message`, `created_at`, `updated_at`
+- `connections`: `id`, `requester_id`, `recipient_id`, `status`, `created_at`, `updated_at` — user↔user; reserved for the future real social graph (both ids reference `user_profiles`).
+- `social_requests` (`003`): `id`, `requester_id`, `kind` (`connection`|`intro`), `target_node_id`, `target_name`, `target_role`, `message`, `status`, `email_sent`, `created_at`, `updated_at` — powers M11. Targets a Markdown graph entity (seed mentor/peer) rather than a Neon user, with `UNIQUE (requester_id, kind, target_node_id)` for idempotent requests. Intro requests email the mentor via Resend server-side; the mentor address is never returned to the client.
 
 ### Feed and Saved Content
 - `content_items`: `id`, `type`, `title`, `body`, `city`, `tags`, `author_id`, `published_at`

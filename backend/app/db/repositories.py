@@ -266,6 +266,71 @@ async def set_user_document_status(
     return row
 
 
+async def create_social_request(
+    db: PostgresDatabase,
+    *,
+    requester_id: str,
+    kind: str,
+    target_node_id: str,
+    target_name: str = "",
+    target_role: str = "",
+    message: str = "",
+) -> tuple[dict[str, Any], bool]:
+    """Insert a connection/intro request, idempotent per (requester, kind, target).
+
+    Returns (row, created) where created is False when a prior request existed.
+    """
+    existing = await db.fetchrow(
+        """
+        select id, kind, target_node_id, target_name, target_role, status, email_sent, created_at
+        from social_requests
+        where requester_id = $1 and kind = $2 and target_node_id = $3
+        """,
+        requester_id,
+        kind,
+        target_node_id,
+    )
+    if existing is not None:
+        return existing, False
+
+    row = await db.fetchrow(
+        """
+        insert into social_requests (requester_id, kind, target_node_id, target_name, target_role, message)
+        values ($1, $2, $3, $4, $5, $6)
+        returning id, kind, target_node_id, target_name, target_role, status, email_sent, created_at
+        """,
+        requester_id,
+        kind,
+        target_node_id,
+        target_name,
+        target_role,
+        message,
+    )
+    if row is None:
+        raise RuntimeError("Unable to persist social request.")
+    return row, True
+
+
+async def mark_social_request_email_sent(
+    db: PostgresDatabase,
+    *,
+    request_id: str,
+) -> None:
+    await db.execute("update social_requests set email_sent = true where id = $1", request_id)
+
+
+async def list_social_requests(db: PostgresDatabase, *, requester_id: str) -> list[dict[str, Any]]:
+    return await db.fetch(
+        """
+        select id, kind, target_node_id, target_name, target_role, status, email_sent, created_at
+        from social_requests
+        where requester_id = $1
+        order by created_at desc
+        """,
+        requester_id,
+    )
+
+
 async def set_app_session(
     db: PostgresDatabase,
     *,

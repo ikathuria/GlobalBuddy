@@ -209,12 +209,12 @@ Tasks:
 **Goal:** Users can connect with each other, request mentor introductions, and build a real social graph on the platform.
 
 Tasks:
-- [ ] Add `connections` table to Neon Postgres: `{id, requester_id, recipient_id, status (pending/accepted/declined), created_at}`
-- [ ] Add `POST /v1/social/connect` endpoint — sends a connection request; stores dynamic user connections in Neon
-- [ ] Update person profile modal — add "Request Connection" button for peers and "Request Intro" button for mentors; both disabled until the user is logged in
-- [ ] Add `POST /v1/social/intro-request` endpoint — sends a templated intro email via Resend without exposing mentor email
-- [ ] Add `/connections` dashboard page listing accepted connections with stage, university, and country
-- [ ] Add WhatsApp/Telegram group links as Markdown `CommunityGroup` nodes — surface them in Explore under a new "Groups" filter chip
+- [x] Add `connections` table to Neon Postgres: `{id, requester_id, recipient_id, status (pending/accepted/declined), created_at}` — defined in `001_neon_persistence.sql`; `003_social_requests.sql` adds `social_requests` for the MVP (requests target seed graph entities, see note below)
+- [x] Add `POST /v1/social/connect` endpoint — sends a connection request; stores dynamic user connections in Neon
+- [x] Update person profile modal — add "Request Connection" button for peers and "Request Intro" button for mentors; both disabled until the user is logged in
+- [x] Add `POST /v1/social/intro-request` endpoint — sends a templated intro email via Resend without exposing mentor email
+- [x] Add `/connections` dashboard page listing accepted connections with stage, university, and country
+- [x] Add WhatsApp/Telegram group links as Markdown `CommunityGroup` nodes — surface them in Explore under a new "Groups" filter chip
 
 ---
 
@@ -331,3 +331,4 @@ claude "Read PLAN.md. Without building anything new, test everything marked done
 - **Branding:** Product-facing name is **Globalदोस्त**. Code identifiers use `globaldost` or `globalbuddy`. Only update UI copy strings, never rename code symbols.
 - **Maps migration:** Replace all `maps.google.com` link-outs with Leaflet embedded maps using OpenStreetMap tiles. No API key required. Add `leaflet` and `react-leaflet` to `frontend/package.json`.
 - **Email privacy:** Intro request emails are sent by the backend via Resend — the requester never sees the mentor's raw email address. The mentor's email is only in the backend environment.
+- **Social requests target seed graph entities (M11):** The people surfaced in Explore are Markdown seed mentors/peers, not Neon `user_profiles` rows, so connection/intro requests are recorded in `social_requests` (`requester_id` → user, `target_node_id` → graph node id). The user↔user `connections` table from `001` is reserved for the future real social graph once a user directory exists (M13 mentor system). When opted-in Neon mentors merge with seed mentors in M13, intro targets that resolve to a real user should also write a `connections` row. Resend is optional — without `RESEND_API_KEY` the intro still records and `email_sent` is `false`.

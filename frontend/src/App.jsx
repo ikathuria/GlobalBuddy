@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import PreArrivalPage from "./pages/PreArrivalPage.jsx";
 import ChatPage from "./pages/ChatPage.jsx";
+import ConnectionsPage from "./pages/ConnectionsPage.jsx";
 import PublicProfilePage from "./pages/PublicProfilePage.jsx";
 
 class ErrorBoundary extends Component {
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/profile/:id" element={<PublicProfilePage />} />
           <Route path="/pre-arrival" element={<PreArrivalPage />} />
           <Route path="/chat" element={<ChatPage />} />
+          <Route path="/connections" element={<ConnectionsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </AuthProvider>

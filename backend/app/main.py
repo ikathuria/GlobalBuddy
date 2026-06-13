@@ -14,7 +14,7 @@ from app.auth import bearer_token_from_header, is_public_api_path, verify_jwt_to
 from app.config import get_settings
 from app.db.neo4j_client import Neo4jClient
 from app.db.postgres import PostgresDatabase
-from app.routers import auth, bridge, chat, documents, graph, plan, pre_arrival, profile, progress
+from app.routers import auth, bridge, chat, documents, graph, plan, pre_arrival, profile, progress, social
 from app.services.markdown_graph import MarkdownGraphService
 
 _telemetry_logger = logging.getLogger("app.telemetry")
@@ -111,6 +111,7 @@ def create_app() -> FastAPI:
     app.include_router(chat.router)
     app.include_router(documents.router)
     app.include_router(progress.router)
+    app.include_router(social.router)
     app.include_router(pre_arrival.router)
     app.include_router(profile.router)
     app.include_router(plan.router)

@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import client from "../api/client.js";
+import { useAuth } from "../contexts/AuthContext.jsx";
 import GraphCanvas from "./GraphCanvas.jsx";
 import NodeDetailCard from "./NodeDetailCard.jsx";
 
 const CATEGORY_OPTIONS = [
   { id: "people", label: "People" },
+  { id: "groups", label: "Groups" },
   { id: "events", label: "Events" },
   { id: "food", label: "Food" },
   { id: "housing", label: "Housing" },
@@ -141,6 +144,22 @@ function buildCategoryData(match, plan) {
     cta: peer.email ? { label: "Email", href: `mailto:${encodeURIComponent(peer.email)}` } : null,
   }));
 
+  const groups = first(match?.community_groups, 12).map((group) => ({
+    cardId: `group-${group.id}`,
+    id: group.id,
+    title: group.name,
+    kind: group.platform || "Group",
+    nodeId: group.id,
+    subtitle: [group.platform, "Community group"].filter(Boolean).join(" | "),
+    description: group.why_recommended || "A community group connected to your university, country, or city.",
+    why: "Group chats are the fastest way to ask quick questions and find your people.",
+    avatar: "GR",
+    avatarTone: avatarTone(group.id),
+    trustSignals: [group.platform ? `On ${group.platform}` : null].filter(Boolean),
+    detailLines: [group.why_recommended || null].filter(Boolean),
+    cta: group.join_url ? { label: "Open group", href: group.join_url } : null,
+  }));
+
   const events = first(match?.community_events, 8).map((event) => ({
     cardId: `event-${event.id}`,
     id: event.id,
@@ -246,6 +265,12 @@ function buildCategoryData(match, plan) {
       description: "Mentors and peers ranked for trust, context, and practical fit.",
       items: [...mentors, ...peers],
       empty: "No people matches yet. Refresh your profile to repopulate support connections.",
+    },
+    groups: {
+      title: "Community groups to join",
+      description: "WhatsApp and Telegram groups matched to your university, country, and city.",
+      items: groups,
+      empty: "No community groups matched yet. Refresh your profile match to repopulate.",
     },
     events: {
       title: "Events that build belonging",
@@ -365,6 +390,10 @@ function ExploreCard({ item, expanded, onToggle, onFocusNode }) {
 }
 
 function PersonProfileModal({ item, onClose }) {
+  const { user, accessToken } = useAuth();
+  const [requestState, setRequestState] = useState("idle"); // idle | sending | sent | error
+  const [requestError, setRequestError] = useState(null);
+
   useEffect(() => {
     if (!item) return undefined;
     const onKeyDown = (event) => {
@@ -377,6 +406,30 @@ function PersonProfileModal({ item, onClose }) {
   if (!item?.isPerson || !item?.profile) return null;
 
   const profile = item.profile;
+  const isMentor = profile.role === "Mentor";
+  const canRequest = Boolean(user && accessToken);
+  const actionLabel = isMentor ? "Request intro" : "Request connection";
+
+  const sendRequest = async () => {
+    if (!canRequest || requestState === "sending" || requestState === "sent") return;
+    setRequestState("sending");
+    setRequestError(null);
+    try {
+      if (isMentor) {
+        await client.post("/v1/social/intro-request", { mentor_node_id: item.nodeId });
+      } else {
+        await client.post("/v1/social/connect", {
+          target_node_id: item.nodeId,
+          target_name: item.title,
+          target_role: "Peer",
+        });
+      }
+      setRequestState("sent");
+    } catch (error) {
+      setRequestState("error");
+      setRequestError(error.response?.data?.detail || "Could not send your request. Please try again.");
+    }
+  };
   const contactOptions = [
     { key: "email", label: "Email", href: contactHref(profile.email, "email") },
     { key: "linkedin", label: "LinkedIn", href: contactHref(profile.linkedin_url, "linkedin") },
@@ -453,6 +506,37 @@ function PersonProfileModal({ item, onClose }) {
               <span>Guidance</span>
               <strong>{profile.why_this_match || profile.connect_hint}</strong>
             </div>
+          )}
+        </div>
+
+        <div className="gb-profile-modal__request">
+          {requestState === "sent" ? (
+            <p className="gb-profile-modal__request-ok" role="status">
+              {isMentor
+                ? "Intro requested — we'll email " + item.title + " on your behalf. Track it under My Connections."
+                : "Connection requested. Track it under My Connections."}
+            </p>
+          ) : canRequest ? (
+            <>
+              <button
+                type="button"
+                className="gb-btn gb-btn-primary"
+                onClick={sendRequest}
+                disabled={requestState === "sending" || !item.nodeId}
+              >
+                {requestState === "sending" ? "Sending..." : actionLabel}
+              </button>
+              {isMentor && (
+                <span className="gb-profile-modal__request-hint">
+                  We email the mentor for you — their address stays private.
+                </span>
+              )}
+              {requestState === "error" && <p className="gb-profile-modal__request-error">{requestError}</p>}
+            </>
+          ) : (
+            <p className="gb-profile-modal__request-hint">
+              <a className="gb-link-btn" href="/auth">Sign in</a> to {isMentor ? "request an intro" : "request a connection"}.
+            </p>
           )}
         </div>
 
@@ -592,7 +676,7 @@ export default function ExploreWorkspace({
           )}
         </aside>
       </section>
-      <PersonProfileModal item={activePerson} onClose={() => setActivePerson(null)} />
+      <PersonProfileModal key={activePerson?.cardId} item={activePerson} onClose={() => setActivePerson(null)} />
     </div>
   );
 }
