@@ -261,10 +261,10 @@ Tasks:
 Tasks:
 - [x] Existing Cypher seed packs cover Chicago, Boston, and NYC
 - [x] Add city selector to `ProfileForm.jsx` Step 1 — dropdown of supported cities with "More cities coming soon" for unsupported entries
-- [ ] Convert Chicago seed data to Markdown graph nodes — Done when: Markdown validation passes and profile matching returns expected Chicago coverage
-- [ ] Convert Boston seed data to Markdown graph nodes — Done when: Boston profile match returns ≥ 5 mentors and ≥ 10 local entities
-- [ ] Convert NYC seed data to Markdown graph nodes — Done when: New York profile match returns ≥ 5 mentors and ≥ 10 local entities
-- [ ] Add metadata quality checks for Markdown graph — Done when: `python -m app.db.validate_graph` reports on all 3 cities
+- [x] Convert Chicago seed data to Markdown graph nodes — done in M4; validation passes and Chicago profile matching returns expected coverage
+- [x] Convert Boston seed data to Markdown graph nodes — `scripts/gen_city_seed.py` emits 32 Boston nodes (5 mentors, 11 local places); `test_multicity.py` asserts city-scoped match
+- [x] Convert NYC seed data to Markdown graph nodes — generator emits 32 New York nodes (5 mentors, 11 local places)
+- [x] Add metadata quality checks for Markdown graph — `python -m app.db.validate_graph` now prints per-city coverage (mentors, local places, type breakdown) for all 3 cities
 
 ---
 

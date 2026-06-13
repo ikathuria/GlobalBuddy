@@ -8,10 +8,31 @@ Usage:
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 from pathlib import Path
 import sys
 
 from app.services.markdown_graph import MarkdownGraphService
+
+
+def _print_city_report(service: MarkdownGraphService) -> None:
+    by_city: dict[str, Counter] = {}
+    for node in service.nodes.values():
+        if not node.city:
+            continue
+        by_city.setdefault(node.city, Counter())[node.type] += 1
+
+    if not by_city:
+        return
+
+    print("\nPer-city coverage:")
+    for city in sorted(by_city):
+        counts = by_city[city]
+        total = sum(counts.values())
+        mentors = counts.get("Mentor", 0)
+        local = sum(counts.get(t, 0) for t in ("LocalEntity", "PlaceOfWorship", "GroceryStore", "HousingArea", "ExplorationSpot", "Restaurant"))
+        summary = ", ".join(f"{t}={counts[t]}" for t in sorted(counts))
+        print(f"- {city}: {total} nodes (mentors={mentors}, local_places={local}) [{summary}]")
 
 
 def main() -> int:
@@ -31,6 +52,8 @@ def main() -> int:
         f"Markdown graph: status={health['status']} "
         f"nodes={health['node_count']} edges={health['edge_count']} root={Path(args.root).resolve()}"
     )
+
+    _print_city_report(service)
 
     if service.validation.warnings:
         print("\nWarnings:")
