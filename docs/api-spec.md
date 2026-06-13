@@ -151,6 +151,17 @@ Sends a chat message. Authenticated users sync chat history to Neon Postgres; pu
 }
 ```
 
+## 6b. POST `/v1/chat/stream`
+Same request body as `/v1/chat/message`, but the response is Server-Sent Events (`text/event-stream`). Each `data:` line is a JSON event:
+
+```
+data: {"type": "session", "session_id": "uuid"}
+data: {"type": "delta", "text": "partial reply text"}
+data: {"type": "done", "reply": "full reply", "session_id": "uuid", "fallback_used": false}
+```
+
+`session` arrives first, `delta` repeats per chunk, and `done` always arrives last — including on provider failure, where `fallback_used` is `true` and `reply` carries whatever partial or fallback text was streamed. Authenticated users get both messages persisted to Neon on `done`. Providers without streaming support send the entire reply as a single `delta`.
+
 ## 7. Progress Endpoints
 
 ### GET `/v1/progress/plan`

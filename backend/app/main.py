@@ -18,7 +18,7 @@ from app.routers import auth, bridge, chat, documents, graph, plan, pre_arrival,
 from app.services.markdown_graph import MarkdownGraphService
 
 _telemetry_logger = logging.getLogger("app.telemetry")
-_TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain", "/v1/chat/message"}
+_TELEMETRY_ROUTES = {"/v1/plan/generate", "/v1/bridge/explain", "/v1/chat/message", "/v1/chat/stream"}
 
 
 class _RequestTelemetryMiddleware(BaseHTTPMiddleware):

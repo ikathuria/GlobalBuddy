@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import json
+
 from fastapi import APIRouter, Request
+from fastapi.responses import StreamingResponse
 
 from app.agents import chat_agent
 from app.auth import get_optional_principal
@@ -35,6 +38,31 @@ async def chat_message(payload: ChatMessageRequest, request: Request) -> ChatMes
         await repositories.add_chat_message(db, user_id=user_id, session_id=sid, role="assistant", content=reply)
 
     return ChatMessageResponse(reply=reply, session_id=sid, fallback_used=fallback)
+
+
+@router.post("/stream")
+async def chat_stream(payload: ChatMessageRequest, request: Request) -> StreamingResponse:
+    """SSE variant of /message — the assistant reply arrives as incremental deltas."""
+    settings = get_settings()
+    message = payload.message.strip()
+    profile = await _current_profile(request)
+
+    async def event_source():
+        sid = payload.session_id
+        async for event in chat_agent.stream_message(settings, session_id=payload.session_id, message=message):
+            sid = event.get("session_id", sid)
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+            if event["type"] == "done" and profile is not None:
+                db = request.app.state.db
+                user_id = str(profile["id"])
+                await repositories.add_chat_message(db, user_id=user_id, session_id=sid, role="user", content=message)
+                await repositories.add_chat_message(db, user_id=user_id, session_id=sid, role="assistant", content=event["reply"])
+
+    return StreamingResponse(
+        event_source(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/history/{session_id}", response_model=ChatHistoryResponse)

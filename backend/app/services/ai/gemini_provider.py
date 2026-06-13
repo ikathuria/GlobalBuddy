@@ -88,16 +88,33 @@ class GeminiProvider:
         parsed = extract_json_object(text) or {}
         return parsed, {"provider": self.name, "model": self._settings.gemini_model}
 
-    async def chat_reply(self, history: list[dict], message: str) -> str:
-        """Free-text conversational reply given chat history + new message."""
+    @staticmethod
+    def _chat_prompt(history: list[dict], message: str) -> str:
         lines = [_CHAT_SYSTEM, ""]
         for msg in history:
             role = "Student" if msg["role"] == "user" else "Assistant"
             lines.append(f"{role}: {msg['content']}")
         lines.append(f"Student: {message}")
         lines.append("Assistant:")
-        prompt = "\n".join(lines)
-        return await self._generate(prompt, temperature=0.6, json_output=False)
+        return "\n".join(lines)
+
+    async def chat_reply(self, history: list[dict], message: str) -> str:
+        """Free-text conversational reply given chat history + new message."""
+        return await self._generate(self._chat_prompt(history, message), temperature=0.6, json_output=False)
+
+    async def chat_reply_stream(self, history: list[dict], message: str):
+        """Yield the conversational reply incrementally as text chunks."""
+        from google import genai
+
+        client = genai.Client(api_key=self._settings.gemini_api_key)
+        stream = await client.aio.models.generate_content_stream(
+            model=self._settings.gemini_model,
+            contents=self._chat_prompt(history, message),
+            config={"temperature": 0.6},
+        )
+        async for chunk in stream:
+            if chunk.text:
+                yield chunk.text
 
     async def explain_term(
         self,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import client from "../api/client.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
-import CulturalBridgeDrawer from "./CulturalBridgeDrawer.jsx";
 
 const QUICK_TERMS = ["security deposit", "credit score", "SSN"];
 
@@ -48,15 +48,12 @@ function saveProgress(sessionId, value) {
 
 export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocusNode, onOpenExplore }) {
   const { user, accessToken } = useAuth();
+  const navigate = useNavigate();
   const [plan, setPlan] = useState(null);
   const [loadingPlan, setLoadingPlan] = useState(false);
-  const [loadingBridge, setLoadingBridge] = useState(false);
   const [planError, setPlanError] = useState(null);
   const [progressError, setProgressError] = useState(null);
-  const [bridgeError, setBridgeError] = useState(null);
   const [term, setTerm] = useState("security deposit");
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [bridge, setBridge] = useState(null);
   const [expandedStepIds, setExpandedStepIds] = useState({});
   const [completed, setCompleted] = useState(() => readProgress(sessionId));
   const canPersistProgress = Boolean(user && accessToken);
@@ -139,38 +136,15 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
     }
   }
 
-  async function explainTerm(termToUse) {
+  function explainTerm(termToUse) {
     const nextTerm = (termToUse ?? term).trim();
-    if (!sessionId) {
-      setBridgeError("Complete profile setup first.");
-      setDrawerOpen(true);
-      return;
-    }
     if (!nextTerm) return;
 
-    setLoadingBridge(true);
-    setBridgeError(null);
-    setBridge(null);
-    setDrawerOpen(true);
-
-    try {
-      const response = await client.post("/v1/bridge/explain", {
-        session_id: sessionId,
-        term: nextTerm,
-        home_country: matchPayload?.evidence_bundle?.student_profile?.country_of_origin || "India",
-        context: "off-campus rental and banking setup",
-      });
-      setBridge(response.data);
-      setTerm(nextTerm);
-    } catch (error) {
-      setBridgeError(error.response?.data?.detail || error.message);
-    } finally {
-      setLoadingBridge(false);
-    }
-  }
-
-  function retryBridge() {
-    explainTerm(term);
+    const homeCountry = matchPayload?.evidence_bundle?.student_profile?.country_of_origin || "";
+    const question = homeCountry
+      ? `What does "${nextTerm}" mean in the US? I'm from ${homeCountry} — explain it with a home-country analogy, common mistakes, and what to do next.`
+      : `What does "${nextTerm}" mean in the US? Explain it plainly with common mistakes and what to do next.`;
+    navigate(`/chat?seed=${encodeURIComponent(question)}`);
   }
 
   async function toggleComplete(step, index) {
@@ -208,7 +182,7 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
       </div>
 
       <div className="gb-plan-toolbar">
-        <button type="button" className="gb-btn gb-btn-primary" onClick={generatePlan} disabled={loadingPlan || loadingBridge}>
+        <button type="button" className="gb-btn gb-btn-primary" onClick={generatePlan} disabled={loadingPlan}>
           {loadingPlan ? "Building your plan..." : plan ? "Refresh plan" : "Generate my 30-day plan"}
         </button>
 
@@ -222,23 +196,18 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
       <div className="gb-bridge-box">
         <div className="gb-bridge-box__head">
           <strong>Need clarity on a US term?</strong>
-          <span>Use Cultural Bridge for plain-language context before taking action.</span>
+          <span>Ask the Cultural Bridge in chat — it remembers your conversation and home context.</span>
         </div>
         <div className="gb-bridge-box__controls">
           <input
             value={term}
             onChange={(event) => setTerm(event.target.value)}
+            onKeyDown={(event) => event.key === "Enter" && explainTerm()}
             placeholder="security deposit"
             aria-label="US term to explain"
-            disabled={loadingBridge}
           />
-          <button
-            type="button"
-            className="gb-btn gb-btn-secondary"
-            onClick={() => explainTerm()}
-            disabled={loadingBridge || loadingPlan}
-          >
-            {loadingBridge ? "Explaining..." : "Explain term"}
+          <button type="button" className="gb-btn gb-btn-secondary" onClick={() => explainTerm()}>
+            Ask in chat
           </button>
         </div>
         <div className="gb-chip-row">
@@ -247,11 +216,7 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
               key={quickTerm}
               type="button"
               className="gb-chip"
-              onClick={() => {
-                setTerm(quickTerm);
-                explainTerm(quickTerm);
-              }}
-              disabled={loadingBridge}
+              onClick={() => explainTerm(quickTerm)}
             >
               {quickTerm}
             </button>
@@ -380,14 +345,6 @@ export default function PlanPanel({ sessionId, matchPayload, onPlanReady, onFocu
         </section>
       )}
 
-      <CulturalBridgeDrawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        bridge={bridge}
-        loading={loadingBridge}
-        error={bridgeError}
-        onRetry={bridgeError ? retryBridge : undefined}
-      />
     </div>
   );
 }

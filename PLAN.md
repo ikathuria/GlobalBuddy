@@ -200,8 +200,8 @@ Tasks:
 - [x] Add `chat_messages` table to Neon Postgres: `{id, user_id, session_id, role (user/assistant), content, created_at}` — Done when: authenticated chat messages persist through `/v1/chat`
 - [x] Add `POST /v1/chat/message` FastAPI endpoint — accepts `{message, session_id}`, loads last 10 messages for context, calls Gemini/Groq, stores both user message and response, returns assistant reply
 - [x] Create `ChatPage.jsx` at `/chat` — persistent chat interface with message history, typing indicator, and quick-chip suggestions
-- [ ] Replace the existing `CulturalBridgeDrawer.jsx` one-off term lookup with a link that opens `/chat` pre-seeded with the term as the first message
-- [ ] Add SSE/WebSocket response streaming when needed — Done when: assistant reply appears incrementally without relying on provider-specific realtime
+- [x] Replace the existing `CulturalBridgeDrawer.jsx` one-off term lookup with a link that opens `/chat` pre-seeded with the term as the first message
+- [x] Add SSE/WebSocket response streaming when needed — Done when: assistant reply appears incrementally without relying on provider-specific realtime
 
 ---
 

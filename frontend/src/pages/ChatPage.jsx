@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import client from "../api/client.js";
+import { Link, useSearchParams } from "react-router-dom";
+import client, { API_BASE_URL } from "../api/client.js";
+import { getAuthToken } from "../auth/tokenStore.js";
 
 const QUICK_CHIPS = [
   "How do I apply for an SSN?",
@@ -27,10 +28,74 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState(null);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const seedSentRef = useRef(false);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Append `text` to the last assistant bubble, creating it if needed.
+  const appendDelta = (text) => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "assistant" && last.streaming) {
+        return [...prev.slice(0, -1), { ...last, content: last.content + text }];
+      }
+      return [...prev, { role: "assistant", content: text, streaming: true }];
+    });
+  };
+
+  const finishStream = () => {
+    setMessages((prev) => {
+      const last = prev[prev.length - 1];
+      if (last?.role === "assistant" && last.streaming) {
+        return [...prev.slice(0, -1), { role: "assistant", content: last.content }];
+      }
+      return prev;
+    });
+  };
+
+  const streamReply = async (msg) => {
+    const token = getAuthToken();
+    const res = await fetch(`${API_BASE_URL}/v1/chat/stream`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify({ message: msg, session_id: sessionId }),
+    });
+    if (!res.ok || !res.body) throw new Error(`stream failed: ${res.status}`);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let sawDelta = false;
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const events = buffer.split("\n\n");
+      buffer = events.pop(); // keep any incomplete trailing event
+      for (const raw of events) {
+        const line = raw.split("\n").find((l) => l.startsWith("data: "));
+        if (!line) continue;
+        const event = JSON.parse(line.slice(6));
+        if (event.type === "session") setSessionId(event.session_id);
+        if (event.type === "delta" && event.text) {
+          sawDelta = true;
+          appendDelta(event.text);
+        }
+        if (event.type === "done") setSessionId(event.session_id);
+      }
+    }
+
+    if (!sawDelta) throw new Error("stream produced no reply");
+    finishStream();
+  };
 
   const send = async (text) => {
     const msg = (text || input).trim();
@@ -41,21 +106,36 @@ export default function ChatPage() {
     setLoading(true);
 
     try {
-      const res = await client.post("/v1/chat/message", {
-        message: msg,
-        session_id: sessionId,
-      });
-      setSessionId(res.data.session_id);
-      setMessages((prev) => [...prev, { role: "assistant", content: res.data.reply }]);
+      await streamReply(msg);
     } catch {
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Sorry, I couldn't reach the AI service right now. Please try again in a moment." },
-      ]);
+      // Streaming unavailable — fall back to the non-streaming endpoint.
+      try {
+        const res = await client.post("/v1/chat/message", {
+          message: msg,
+          session_id: sessionId,
+        });
+        setSessionId(res.data.session_id);
+        setMessages((prev) => [...prev, { role: "assistant", content: res.data.reply }]);
+      } catch {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: "Sorry, I couldn't reach the AI service right now. Please try again in a moment." },
+        ]);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Cultural Bridge handoff: /chat?seed=<question> sends the question as the first message.
+  useEffect(() => {
+    const seed = searchParams.get("seed");
+    if (!seed || seedSentRef.current) return;
+    seedSentRef.current = true;
+    setSearchParams({}, { replace: true });
+    send(seed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleKey = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
