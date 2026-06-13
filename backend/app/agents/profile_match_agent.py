@@ -202,7 +202,7 @@ def _maps_url(row: dict[str, Any]) -> str:
     q = str(row.get("maps_query") or row.get("name") or "").strip()
     if not q:
         return ""
-    return f"https://www.google.com/maps/search/?api=1&query={quote_plus(q)}"
+    return f"https://www.openstreetmap.org/search?query={quote_plus(q)}"
 
 
 def _row_to_local_place(

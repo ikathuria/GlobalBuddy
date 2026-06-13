@@ -39,6 +39,7 @@ PUBLIC_V1_PREFIXES = (
     "/v1/bridge/explain",
     "/v1/graph/subgraph",
     "/v1/pre-arrival/checklist",
+    "/v1/feed",
 )
 
 

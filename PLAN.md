@@ -222,12 +222,12 @@ Tasks:
 **Goal:** Logged-in users see an ongoing feed of culturally relevant events, guides, and local tips — not tied to the 30-day clock.
 
 Tasks:
-- [ ] Add `content_items` table to Neon Postgres for dynamic/published content
-- [ ] Seed static Chicago guides, tips, and restaurant spotlights as Markdown `Guide` / `Event` / `LocalEntity` nodes
-- [ ] Add `GET /v1/feed` FastAPI endpoint — returns Markdown graph items + Neon content filtered by city and cultural tags
-- [ ] Add `FeedPage.jsx` at `/feed` route — card-based feed with category tabs and pagination/infinite scroll
-- [ ] Replace Google Maps link-outs with Leaflet + OpenStreetMap embeds in `NodeDetailCard.jsx` and `MapPreviewPanel.jsx`
-- [ ] Add "Save" button to feed items — saved items stored in Neon `saved_content` table and accessible at `/saved`
+- [x] Add `content_items` table to Neon Postgres for dynamic/published content — defined in `001`; `/v1/feed` merges published `content_items` with Markdown items
+- [x] Seed static Chicago guides, tips, and restaurant spotlights as Markdown `Guide` / `Event` / `LocalEntity` nodes — added winter-survival and CTA/Ventra tip guides alongside existing events/restaurants
+- [x] Add `GET /v1/feed` FastAPI endpoint — returns Markdown graph items + Neon content filtered by city and cultural tags
+- [x] Add `FeedPage.jsx` at `/feed` route — card-based feed with category tabs and Load-more pagination
+- [x] Replace Google Maps link-outs with OpenStreetMap in `NodeDetailCard.jsx`, `MapPreviewPanel.jsx`, `ExploreWorkspace.jsx`, `CommunityFitPanel.jsx`, and backend `_maps_url` — see deviation note below
+- [x] Add "Save" button to feed items — saved items stored in Neon `saved_content` table and accessible at `/saved`
 
 ---
 
@@ -329,6 +329,6 @@ claude "Read PLAN.md. Without building anything new, test everything marked done
 - **LinkedIn OAuth scope:** Basic OIDC (`openid profile email`) works without app review. Education history endpoint requires LinkedIn review (1–4 weeks). Build pre-fill to work without education data and treat university pre-fill as a bonus.
 - **Neo4j optionality:** Keep the existing Neo4j/Cypher implementation only as a legacy adapter or future upgrade path. The MVP should run without graph database credentials.
 - **Branding:** Product-facing name is **Globalदोस्त**. Code identifiers use `globaldost` or `globalbuddy`. Only update UI copy strings, never rename code symbols.
-- **Maps migration:** Replace all `maps.google.com` link-outs with Leaflet embedded maps using OpenStreetMap tiles. No API key required. Add `leaflet` and `react-leaflet` to `frontend/package.json`.
+- **Maps migration:** All Google Maps link-outs are replaced with OpenStreetMap (`openstreetmap.org/search?query=` link-outs + an OSM `export/embed.html` iframe in `MapPreviewPanel`). **Deviation from original plan:** did not add `leaflet`/`react-leaflet`. OSM's embed needs a lat/lon bbox and does not geocode free text, while most graph nodes (mentors, tasks, events, and subgraph `GraphNode`s) carry no coordinates — so an interactive Leaflet marker map can't be placed for them without geocoding. The embed renders a real OSM map when a card has `latitude`/`longitude` (local places do) and falls back to an OSM search link otherwise. Adding react-leaflet later only pays off once lat/lon coverage is added to the seed data and `GraphNode`.
 - **Email privacy:** Intro request emails are sent by the backend via Resend — the requester never sees the mentor's raw email address. The mentor's email is only in the backend environment.
 - **Social requests target seed graph entities (M11):** The people surfaced in Explore are Markdown seed mentors/peers, not Neon `user_profiles` rows, so connection/intro requests are recorded in `social_requests` (`requester_id` → user, `target_node_id` → graph node id). The user↔user `connections` table from `001` is reserved for the future real social graph once a user directory exists (M13 mentor system). When opted-in Neon mentors merge with seed mentors in M13, intro targets that resolve to a real user should also write a `connections` row. Resend is optional — without `RESEND_API_KEY` the intro still records and `email_sent` is `false`.

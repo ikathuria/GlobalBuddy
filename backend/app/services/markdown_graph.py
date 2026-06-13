@@ -240,7 +240,7 @@ def _maps_url(data: dict[str, Any]) -> str:
     q = str(data.get("maps_query") or data.get("title") or data.get("name") or "").strip()
     if not q:
         return ""
-    return f"https://www.google.com/maps/search/?api=1&query={quote_plus(q)}"
+    return f"https://www.openstreetmap.org/search?query={quote_plus(q)}"
 
 
 class MarkdownGraphService:
@@ -461,6 +461,46 @@ class MarkdownGraphService:
                     "category": str(node.data.get("category") or "pre_arrival"),
                 }
             )
+        return items
+
+    _FEED_TYPE_MAP = {
+        "Guide": "guide",
+        "Event": "event",
+        "Restaurant": "food",
+        "LocalEntity": "tip",
+    }
+
+    def feed_items(self, city: str | None = None, tags: list[str] | None = None) -> list[dict[str, Any]]:
+        """City discovery feed sourced from Guide/Event/Restaurant/LocalEntity nodes."""
+        wanted_tags = {t.strip().lower() for t in (tags or []) if t.strip()}
+        items: list[dict[str, Any]] = []
+        for node in self.nodes.values():
+            feed_type = self._FEED_TYPE_MAP.get(node.type)
+            if feed_type is None:
+                continue
+            if city and node.city and node.city.lower() != city.lower():
+                continue
+            node_tags = _as_str_list(node.data.get("tags")) or _as_str_list(node.data.get("country_tags"))
+            if wanted_tags and not (wanted_tags & {t.lower() for t in node_tags}):
+                continue
+            body = str(node.data.get("description") or "").strip() or (
+                node.body.splitlines()[0] if node.body else ""
+            )
+            items.append(
+                {
+                    "id": node.id,
+                    "source": "markdown",
+                    "type": feed_type,
+                    "title": node.title,
+                    "body": body,
+                    "city": node.city,
+                    "tags": node_tags,
+                    "maps_query": str(node.data.get("maps_query") or ""),
+                    "maps_link": _maps_url(node.data),
+                    "category": str(node.data.get("category") or ""),
+                }
+            )
+        items.sort(key=lambda item: (item["type"], item["title"]))
         return items
 
     def _parse_nodes(self) -> tuple[dict[str, MarkdownNode], list[str]]:

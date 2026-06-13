@@ -18,7 +18,7 @@ function mapsHref(item) {
   if (direct) return direct;
   const query = (item?.maps_query || item?.address || item?.location || item?.name || "").trim();
   if (!query) return "";
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`;
 }
 
 function contactHref(value, type) {

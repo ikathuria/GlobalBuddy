@@ -331,6 +331,72 @@ async def list_social_requests(db: PostgresDatabase, *, requester_id: str) -> li
     )
 
 
+async def list_content_items(
+    db: PostgresDatabase,
+    *,
+    city: str = "",
+    content_type: str = "",
+) -> list[dict[str, Any]]:
+    return await db.fetch(
+        """
+        select id, type, title, body, city, tags, published_at, created_at
+        from content_items
+        where published_at is not null
+          and ($1 = '' or lower(city) = lower($1))
+          and ($2 = '' or type = $2)
+        order by coalesce(published_at, created_at) desc
+        """,
+        city,
+        content_type,
+    )
+
+
+async def add_saved_content(
+    db: PostgresDatabase,
+    *,
+    user_id: str,
+    content_id: str,
+    content_source: str = "markdown",
+) -> None:
+    await db.execute(
+        """
+        insert into saved_content (user_id, content_id, content_source)
+        values ($1, $2, $3)
+        on conflict (user_id, content_id, content_source) do nothing
+        """,
+        user_id,
+        content_id,
+        content_source,
+    )
+
+
+async def remove_saved_content(
+    db: PostgresDatabase,
+    *,
+    user_id: str,
+    content_id: str,
+    content_source: str = "markdown",
+) -> None:
+    await db.execute(
+        "delete from saved_content where user_id = $1 and content_id = $2 and content_source = $3",
+        user_id,
+        content_id,
+        content_source,
+    )
+
+
+async def list_saved_content(db: PostgresDatabase, *, user_id: str) -> list[dict[str, Any]]:
+    return await db.fetch(
+        """
+        select content_id, content_source, created_at
+        from saved_content
+        where user_id = $1
+        order by created_at desc
+        """,
+        user_id,
+    )
+
+
 async def set_app_session(
     db: PostgresDatabase,
     *,

@@ -5,7 +5,7 @@ function openMapsUrl(item) {
   if (u) return u;
   const q = (item.maps_query || item.name || "").trim();
   if (!q) return "";
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(q)}`;
 }
 
 function LocalRow({ item, badge }) {
@@ -26,11 +26,11 @@ function LocalRow({ item, badge }) {
       <div className="gb-local-actions">
         {href && (
           <a className="gb-btn gb-btn-primary gb-local-btn" href={href} target="_blank" rel="noopener noreferrer">
-            Open in Google Maps
+            Open in OpenStreetMap
           </a>
         )}
       </div>
-      <MapPreviewPanel mapsLink={item.maps_link} mapsQuery={item.maps_query} title={item.name} />
+      <MapPreviewPanel latitude={item.latitude} longitude={item.longitude} mapsLink={item.maps_link} mapsQuery={item.maps_query} title={item.name} />
     </article>
   );
 }
@@ -52,7 +52,7 @@ function TransitRow({ t }) {
       {href && (
         <div className="gb-local-actions">
           <a className="gb-btn gb-btn-secondary gb-local-btn" href={href} target="_blank" rel="noopener noreferrer">
-            Open in Google Maps
+            Open in OpenStreetMap
           </a>
         </div>
       )}
@@ -81,7 +81,7 @@ function EventRow({ e }) {
       {href && (
         <div className="gb-local-actions">
           <a className="gb-btn gb-btn-primary gb-local-btn" href={href} target="_blank" rel="noopener noreferrer">
-            Open in Google Maps
+            Open in OpenStreetMap
           </a>
         </div>
       )}

@@ -17,7 +17,7 @@ const QUICK_ACTIONS = [
   { label: "AI Chat", desc: "Ask anything about US life", href: "/chat", icon: "💬", ready: true },
   { label: "My Connections", desc: "Track your intro and connection requests", href: "/connections", icon: "🤝", ready: true },
   { label: "Find Mentors", desc: "Connect with settled students", href: "/mentors", icon: "👥", ready: false },
-  { label: "Discover Feed", desc: "Events and guides in your city", href: "/feed", icon: "🌆", ready: false },
+  { label: "Discover Feed", desc: "Events and guides in your city", href: "/feed", icon: "🌆", ready: true },
 ];
 
 

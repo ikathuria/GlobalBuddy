@@ -22,7 +22,7 @@ function mapsHref(node) {
   const query = (node?.maps_query || node?.address || node?.label || "").trim();
   if (!query) return "";
 
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  return `https://www.openstreetmap.org/search?query=${encodeURIComponent(query)}`;
 }
 
 export default function NodeDetailCard({ node, onClear }) {
@@ -52,7 +52,7 @@ export default function NodeDetailCard({ node, onClear }) {
       <div className="gb-node-detail__actions">
         {href && (
           <a className="gb-btn gb-btn-primary" href={href} target="_blank" rel="noopener noreferrer">
-            Open in Google Maps
+            Open in OpenStreetMap
           </a>
         )}
 

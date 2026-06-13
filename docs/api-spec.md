@@ -245,6 +245,30 @@ Lists the current user's connection and intro requests, newest first.
 { "items": [ { "id": "uuid", "kind": "intro", "target_name": "Priya Shah", "status": "pending", "email_sent": true, "created_at": "..." } ] }
 ```
 
+## 8c. Feed Endpoints (M12)
+Browsing is public; saving requires `Authorization: Bearer <token>`.
+
+### GET `/v1/feed`
+Query: `city` (default `Chicago`), `category` (`guide|event|food|tip`), `offset`, `limit` (1–50), `tags` (comma-separated). Merges Markdown graph items with published Neon `content_items`. For logged-in users each item carries `saved`.
+
+```json
+{
+  "items": [
+    { "id": "guide_cta_ventra_basics", "source": "markdown", "type": "guide", "title": "...", "body": "...", "city": "Chicago", "tags": ["transit"], "maps_query": "", "maps_link": "", "saved": false }
+  ],
+  "next_offset": 9
+}
+```
+
+### POST `/v1/feed/save`
+`{ "content_id": "guide_cta_ventra_basics", "content_source": "markdown" }` → `204`.
+
+### DELETE `/v1/feed/save/{content_id}?content_source=markdown`
+→ `204`.
+
+### GET `/v1/feed/saved`
+Returns the user's saved items resolved against the feed corpus.
+
 ## 9. Auth Endpoints
 - `GET /v1/auth/config`
 - `GET /v1/auth/me`
