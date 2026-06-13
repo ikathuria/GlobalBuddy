@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import client from "../api/client.js";
 import { useAuth } from "../contexts/AuthContext.jsx";
 import DocumentTracker from "../components/DocumentTracker.jsx";
+import NotificationBell from "../components/NotificationBell.jsx";
 
 const STAGES = [
   { id: "newcomer", label: "Newcomer", desc: "First 3 months", icon: "✈️" },
@@ -150,6 +151,7 @@ export default function DashboardPage() {
           <span className="gb-brand-name">{"Globalदोस्त"}</span>
         </Link>
         <div className="gb-nav-right">
+          <NotificationBell />
           <span className="gb-nav-user">{displayProfile.email || user?.email}</span>
           <button type="button" className="gb-btn gb-btn-ghost" onClick={handleSignOut}>
             Sign out

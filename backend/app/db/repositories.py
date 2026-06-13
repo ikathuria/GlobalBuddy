@@ -331,6 +331,64 @@ async def list_social_requests(db: PostgresDatabase, *, requester_id: str) -> li
     )
 
 
+async def create_notification(
+    db: PostgresDatabase,
+    *,
+    user_id: str,
+    type: str,
+    title: str,
+    body: str = "",
+) -> dict[str, Any]:
+    row = await db.fetchrow(
+        """
+        insert into notifications (user_id, type, title, body)
+        values ($1, $2, $3, $4)
+        returning id, type, title, body, read, created_at
+        """,
+        user_id,
+        type,
+        title,
+        body,
+    )
+    if row is None:
+        raise RuntimeError("Unable to persist notification.")
+    return row
+
+
+async def list_notifications(db: PostgresDatabase, *, user_id: str, limit: int = 30) -> list[dict[str, Any]]:
+    return await db.fetch(
+        """
+        select id, type, title, body, read, created_at
+        from notifications
+        where user_id = $1
+        order by created_at desc
+        limit $2
+        """,
+        user_id,
+        limit,
+    )
+
+
+async def count_unread_notifications(db: PostgresDatabase, *, user_id: str) -> int:
+    row = await db.fetchrow(
+        "select count(*)::int as c from notifications where user_id = $1 and read = false",
+        user_id,
+    )
+    return int(row["c"]) if row else 0
+
+
+async def mark_notification_read(db: PostgresDatabase, *, user_id: str, notification_id: str) -> None:
+    await db.execute(
+        "update notifications set read = true where id = $1 and user_id = $2",
+        notification_id,
+        user_id,
+    )
+
+
+async def mark_all_notifications_read(db: PostgresDatabase, *, user_id: str) -> None:
+    await db.execute("update notifications set read = true where user_id = $1 and read = false", user_id)
+
+
 async def opt_in_mentor(
     db: PostgresDatabase,
     *,

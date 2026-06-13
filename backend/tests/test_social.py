@@ -52,7 +52,11 @@ def social_env(api_client, monkeypatch):
     async def _get_profile(_db, _claims):
         return _profile()
 
+    async def _create_notification(_db, **kwargs):
+        return {"id": "notif-1", **kwargs}
+
     monkeypatch.setattr("app.db.repositories.get_or_create_profile_from_claims", _get_profile)
+    monkeypatch.setattr("app.db.repositories.create_notification", _create_notification)
     return monkeypatch
 
 

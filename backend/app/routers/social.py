@@ -92,7 +92,7 @@ async def connect(payload: ConnectRequest, request: Request) -> SocialRequestIte
     target_name = payload.target_name or (node.title if node else "")
     target_role = payload.target_role or (node.type if node else "")
 
-    row, _created = await repositories.create_social_request(
+    row, created = await repositories.create_social_request(
         db,
         requester_id=str(profile["id"]),
         kind="connection",
@@ -101,6 +101,14 @@ async def connect(payload: ConnectRequest, request: Request) -> SocialRequestIte
         target_role=target_role,
         message=payload.message,
     )
+    if created:
+        await repositories.create_notification(
+            db,
+            user_id=str(profile["id"]),
+            type="connection_sent",
+            title="Connection requested",
+            body=f"You asked to connect with {target_name or 'a peer'}.",
+        )
     return _item(row)
 
 
@@ -149,6 +157,17 @@ async def intro_request(payload: IntroRequest, request: Request) -> IntroResult:
         )
         if email_sent:
             await repositories.mark_social_request_email_sent(db, request_id=str(row["id"]))
+
+    if created:
+        await repositories.create_notification(
+            db,
+            user_id=str(profile["id"]),
+            type="intro_sent",
+            title="Intro requested",
+            body=f"We've reached out to {mentor_name} on your behalf."
+            if email_sent
+            else f"Your intro request to {mentor_name} is recorded.",
+        )
 
     return IntroResult(
         id=str(row["id"]),

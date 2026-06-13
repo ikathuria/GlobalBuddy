@@ -247,11 +247,11 @@ Tasks:
 **Goal:** Users receive timely, useful notifications — in-app and via email — without being spammed.
 
 Tasks:
-- [ ] Add `notifications` table to Neon Postgres: `{id, user_id, type, title, body, read, created_at}`
-- [ ] Add notification triggers: connection request received, intro request accepted, new message, stage upgrade available, document tracker reminder
-- [ ] Add notification bell icon to the frontend nav — badge count from polling or SSE, dropdown of recent notifications
-- [ ] Add Resend email integration — send email for connection accepted, intro request received, and weekly digest
-- [ ] Add browser push notification opt-in — use Web Push API; prompt user after first login
+- [x] Add `notifications` table to Neon Postgres: `{id, user_id, type, title, body, read, created_at}` — defined in `001`
+- [~] Add notification triggers — wired requester-side triggers (`connection_sent`, `intro_sent`) in the social router. Recipient-side triggers (connection request *received*, intro *accepted*, new message) need the real social graph; stage-upgrade and document reminders need a scheduler (see note)
+- [x] Add notification bell icon to the frontend nav — `NotificationBell` polls `GET /v1/notifications` every 30s, shows an unread badge and a dropdown with mark-read / mark-all-read
+- [~] Add Resend email integration — intro-request email ships in M11. Connection-accepted and weekly-digest emails need the real social graph + a scheduler (see note)
+- [~] Add browser push notification opt-in — `NotificationBell` offers an "Enable browser alerts" prompt and raises a local `Notification` for new items when permission is granted. True server-sent Web Push (VAPID keys + service worker + subscription store) is deferred (see note)
 
 ---
 
@@ -332,4 +332,5 @@ claude "Read PLAN.md. Without building anything new, test everything marked done
 - **Branding:** Product-facing name is **Globalदोस्त**. Code identifiers use `globaldost` or `globalbuddy`. Only update UI copy strings, never rename code symbols.
 - **Maps migration:** All Google Maps link-outs are replaced with OpenStreetMap (`openstreetmap.org/search?query=` link-outs + an OSM `export/embed.html` iframe in `MapPreviewPanel`). **Deviation from original plan:** did not add `leaflet`/`react-leaflet`. OSM's embed needs a lat/lon bbox and does not geocode free text, while most graph nodes (mentors, tasks, events, and subgraph `GraphNode`s) carry no coordinates — so an interactive Leaflet marker map can't be placed for them without geocoding. The embed renders a real OSM map when a card has `latitude`/`longitude` (local places do) and falls back to an OSM search link otherwise. Adding react-leaflet later only pays off once lat/lon coverage is added to the seed data and `GraphNode`.
 - **Email privacy:** Intro request emails are sent by the backend via Resend — the requester never sees the mentor's raw email address. The mentor's email is only in the backend environment.
+- **Notifications scope (M14):** In-app notifications are fully working: server-side triggers create rows, the bell polls every 30s, and items mark read. Three pieces are deferred and share root causes: (1) recipient-side triggers (connection/intro *received* or *accepted*, new message) need real user↔user relationships, not seed targets; (2) weekly digest + "stage upgrade available" + "document reminder" need a scheduled job (no cron/worker yet — could be a Railway cron or `pg_cron`); (3) true Web Push needs VAPID keys, a service worker with a `push` handler, and a `push_subscriptions` table — only the client permission prompt + local `Notification` is implemented. Polling was chosen over SSE for the bell to keep it simple and proxy-friendly.
 - **Social requests target seed graph entities (M11):** The people surfaced in Explore are Markdown seed mentors/peers, not Neon `user_profiles` rows, so connection/intro requests are recorded in `social_requests` (`requester_id` → user, `target_node_id` → graph node id). The user↔user `connections` table from `001` is reserved for the future real social graph once a user directory exists (M13 mentor system). When opted-in Neon mentors merge with seed mentors in M13, intro targets that resolve to a real user should also write a `connections` row. Resend is optional — without `RESEND_API_KEY` the intro still records and `email_sent` is `false`.
